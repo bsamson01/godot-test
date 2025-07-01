@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://dls1p48tsiqt3"]
+
+[ext_resource type="ArrayMesh" uid="uid://dwfcdbuxjx24" path="res://models/Build_01.obj" id="1_v8by0"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kwi5i"]
+
+[node name="Business" type="MeshInstance3D" groups=["business"]]
+transform = Transform3D(-8.74228e-09, 0, -0.2, 0, 0.2, 0, 0.2, 0, -8.74228e-09, 0, 1.1891, 0)
+mesh = ExtResource("1_v8by0")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_kwi5i")

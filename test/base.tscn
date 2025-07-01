@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3 uid="uid://bgc2ul6r5voac"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_p6kws"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p6kws"]
+albedo_color = Color(0.0980392, 0.105882, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_175jt"]
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_p6kws"]
+points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
+
+[node name="Base" type="MeshInstance3D" groups=["base"]]
+mesh = SubResource("PlaneMesh_p6kws")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_p6kws")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(-3.71489e-08, 0, 0.0334734, 0, 0.169977, 0, -0.849868, 0, -1.46317e-09, -0.998292, 0.0870906, 0)
+mesh = SubResource("BoxMesh_175jt")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.95213, 0, 0, 0, 0.169374, 0, 0, 0, 0.0333547, 0, 0.0855658, 1.02895)
+mesh = SubResource("BoxMesh_175jt")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.97634, 0, 0, 0, 0.169977, 0, 0, 0, 0.0334734, 0, 0.0855658, -1.01297)
+mesh = SubResource("BoxMesh_175jt")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(-9.11667e-08, 0, -0.0334734, 0, 0.169977, 0, 2.08565, 0, -1.46317e-09, 0.974762, 0.0855658, 0)
+mesh = SubResource("BoxMesh_175jt")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_p6kws")

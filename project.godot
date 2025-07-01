@@ -23,6 +23,9 @@ WorldState="*res://WorldState.gd"
 [global_group]
 
 gang_members=""
+shop=""
+business=""
+base=""
 
 [rendering]
 
