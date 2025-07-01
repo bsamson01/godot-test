@@ -1,14 +1,55 @@
-extends AIBrain  
+extends AIBrain
 class_name NormalMemberAI
 
-func process_tick(current_tick: int):
-	super.process_tick(current_tick)
+var bt_player: BTPlayer
+
+func _ready():
+	super._ready()
+	_setup_behavior_tree()
+
+func _setup_behavior_tree():
+	# Create BTPlayer node
+	bt_player = BTPlayer.new()
+	bt_player.name = "BTPlayer"
+	add_child(bt_player)
 	
-	var member = get_member()
-	if not member or not member.current_order:
-		return
-		
-	_process_current_order(member, current_tick)
+	# Create and assign the master behavior tree
+	var behavior_tree = MasterAIBehavior.create_behavior_tree()
+	bt_player.behavior_tree = behavior_tree
+	
+	# Initialize blackboard with member data
+	bt_player.blackboard.set_var("member_id", member_id)
+	
+	# Set update mode
+	bt_player.update_mode = BTPlayer.UpdateMode.PHYSICS
+	bt_player.active = true
+
+func process_tick(current_tick: int):
+	# Update current tick in blackboard for time-based behaviors
+	bt_player.blackboard.set_var("current_tick", current_tick)
+	
+	# The BTPlayer handles the actual behavior tree execution
+
+func _exit_tree():
+	if bt_player:
+		bt_player.queue_free()
+
+# Override these methods to provide agent functionality
+func get_member() -> GangMember:
+	return WorldState.get_gang_member(member_id)
+
+func set_status(status_text: String):
+	# Update visual status if available
+	var member_node = WorldState.get_gang_member_node(member_id)
+	if member_node and member_node.has_node("StatusLabel"):
+		var label = member_node.get_node("StatusLabel")
+		if label:
+			label.text = status_text
+
+func updateTargetLocation(target_pos: Vector3):
+	var member_node = WorldState.get_gang_member_node(member_id)
+	if member_node and member_node.has_method("updateTargetLocation"):
+		member_node.updateTargetLocation(target_pos)
 
 func _process_current_order(member: GangMember, current_tick: int):
 	var order = member.current_order
