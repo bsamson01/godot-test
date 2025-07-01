@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3 uid="uid://cgl5fdstxanpa"]
+
+[ext_resource type="Script" uid="uid://hwpvh46jn6j3" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://bpfuq00n1hvoc" path="res://scripts/systems/Clock.gd" id="2_0xm2m"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_ig7tw")
+
+[node name="Clock" type="Node" parent="."]
+script = ExtResource("2_0xm2m")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="UIContainer" type="VBoxContainer" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TimeOfDayLabel" type="Label" parent="UI/UIContainer"]
+layout_mode = 2
+
+[node name="FactionFundsLabel" type="Label" parent="UI/UIContainer"]
+layout_mode = 2
+
+[connection signal="tick" from="Clock" to="." method="_on_tick"]

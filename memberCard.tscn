@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3 uid="uid://c2whsn42xvhug"]
+
+[ext_resource type="Script" uid="uid://btrlxdbe640ci" path="res://member_card.gd" id="1_nw0so"]
+
+[node name="MemberCard" type="Panel"]
+custom_minimum_size = Vector2(400, 104)
+offset_right = 400.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_stretch_ratio = 0.0
+script = ExtResource("1_nw0so")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 11.0
+offset_top = 6.0
+offset_right = 391.0
+offset_bottom = 110.0
+
+[node name="NameLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="StateLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="OrderLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="RoleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
