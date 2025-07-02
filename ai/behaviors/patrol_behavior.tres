@@ -1,0 +1,37 @@
+[gd_resource type="BehaviorTree" load_steps=13 format=3 uid="uid://q8cwpwa8p3mt"]
+
+[ext_resource type="Script" uid="uid://o0ibqioc4w3a" path="res://ai/tasks/patrol/get_territory_boundaries.gd" id="1_ecwhu"]
+[ext_resource type="Script" uid="uid://ft2annmdi4ja" path="res://ai/tasks/patrol/pick_patrol_point.gd" id="2_6cmmy"]
+[ext_resource type="Script" uid="uid://bkje2p7ux2awm" path="res://ai/tasks/shared/move_to_location.gd" id="3_7q2ns"]
+[ext_resource type="Script" uid="uid://bsnvs5ngfyln2" path="res://ai/tasks/shared/wait_for_duration.gd" id="4_167i1"]
+[ext_resource type="Script" uid="uid://bh8csyhp7vrh6" path="res://ai/tasks/patrol/check_for_threats.gd" id="5_ued8d"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_s3mhm"]
+
+[sub_resource type="BTAction" id="BTAction_oa6e6"]
+script = ExtResource("1_ecwhu")
+
+[sub_resource type="BTAction" id="BTAction_8xpph"]
+script = ExtResource("2_6cmmy")
+
+[sub_resource type="BTAction" id="BTAction_ao3nl"]
+script = ExtResource("3_7q2ns")
+location_var = "target_location"
+arrive_distance = 2.0
+
+[sub_resource type="BTAction" id="BTAction_tt67y"]
+script = ExtResource("4_167i1")
+duration = 1.0
+random_variance = 0.0
+
+[sub_resource type="BTAction" id="BTAction_5f4pr"]
+script = ExtResource("5_ued8d")
+detection_radius = 15.0
+check_duration = 2.0
+
+[sub_resource type="BTSelector" id="BTSelector_e56fj"]
+children = [SubResource("BTAction_oa6e6"), SubResource("BTAction_8xpph"), SubResource("BTAction_ao3nl"), SubResource("BTAction_tt67y"), SubResource("BTAction_5f4pr")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_s3mhm")
+root_task = SubResource("BTSelector_e56fj")

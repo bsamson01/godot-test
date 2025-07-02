@@ -24,7 +24,6 @@ func _ready():
 	# Create game manager
 	game_manager = GameManager.new()
 	game_manager.name = "GameManager"
-	game_manager.config = config.duplicate()  # Use a copy of the config
 	add_child(game_manager)
 	
 	# Connect to game events for UI updates

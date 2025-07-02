@@ -22,27 +22,27 @@ func consider_new_orders():
 
 	# BUY_SUPPLIES: funds are high, but supplies are low
 	if faction.funds > 500 and faction.supplies < 500:
-		maybe_queue_order(Order.OrderType.BUY_SUPPLIES)
+		maybe_queue_order(Order.TYPE_BUY_SUPPLIES)
 
 	# SPY: funds are good and no negotiation in progress
 	if faction.funds > 600 and not faction.negotiations_active:
-		maybe_queue_order(Order.OrderType.SPY)
+		maybe_queue_order(Order.TYPE_SPY)
 
-	# RECRUIT: if we’re under-strength
+	# RECRUIT: if we're under-strength
 	if faction.funds > 2000 and members.size() < 5:
-		maybe_queue_order(Order.OrderType.RECRUIT)
+		maybe_queue_order(Order.TYPE_RECRUIT_MEMBERS)
 
 	# DEFEND: low supplies or few members = risk
 	if faction.supplies < 300 or members.size() <= 2:
-		maybe_queue_order(Order.OrderType.DEFEND)
+		maybe_queue_order(Order.TYPE_DEFEND_TERRITORY)
 
 	# ATTACK: if faction is strong and has surplus funds
 	if faction.funds > 1000 and members.size() >= 5:
-		maybe_queue_order(Order.OrderType.ATTACK)
+		maybe_queue_order(Order.TYPE_ATTACK_ENEMY)
 
 	# PATROL: idle members + territories => patrol them
 	if idle_members.size() > 0 and territories.size() > 0:
-		maybe_queue_order(Order.OrderType.PATROL)
+		maybe_queue_order(Order.TYPE_PATROL_TERRITORY)
 
 
 func maybe_queue_order(order_type: int, target_id: String = "") -> bool:
@@ -55,13 +55,13 @@ func maybe_queue_order(order_type: int, target_id: String = "") -> bool:
 			return false
 	
 	# For BUY_SUPPLIES, only one allowed in the queue at any time
-	if order_type == Order.OrderType.BUY_SUPPLIES:
+	if order_type == Order.TYPE_BUY_SUPPLIES:
 		for member in members:
-			if member.current_order && member.current_order.type == Order.OrderType.BUY_SUPPLIES:
+			if member.current_order && member.current_order.type == Order.TYPE_BUY_SUPPLIES:
 				return false
 
 		for order in order_queue:
-			if order.type == Order.OrderType.BUY_SUPPLIES:
+			if order.type == Order.TYPE_BUY_SUPPLIES:
 				return false
 
 	var new_order = Order.new()
@@ -95,14 +95,14 @@ func assign_orders_to_members():
 		if available_members.is_empty():
 			break
 
-		if order.type == Order.OrderType.BUY_SUPPLIES and assigned_supply_order:
+		if order.type == Order.TYPE_BUY_SUPPLIES and assigned_supply_order:
 			continue
 
 		var member = available_members.pop_front()
 		if member.assign_order(order):
 			order_history.append(order)
 			order_queue.erase(order)
-			if order.type == Order.OrderType.BUY_SUPPLIES:
+			if order.type == Order.TYPE_BUY_SUPPLIES:
 				assigned_supply_order = true
 
 
@@ -112,9 +112,9 @@ func _is_order_still_valid(order: Order) -> bool:
 		return false
 		
 	match order.type:
-		Order.OrderType.BUY_SUPPLIES:
+		Order.TYPE_BUY_SUPPLIES:
 			return faction.funds > 500
-		Order.OrderType.SPY:
+		Order.TYPE_SPY:
 			return not faction.negotiations_active
 		_:
 			return true

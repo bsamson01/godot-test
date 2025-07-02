@@ -11,6 +11,7 @@ class_name Faction
 @export var income_log: Array[Dictionary] = []
 @export var business_ids: Array[String] = []
 @export var territory_ids: Array[String] = []
+@export var base_location: Vector3 = Vector3.ZERO
 
 # Relationships by faction ID
 @export var relationships: Dictionary = {}  # faction_id -> "Hostile"/"Ally"/"Neutral"

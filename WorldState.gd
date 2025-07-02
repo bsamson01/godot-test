@@ -89,6 +89,9 @@ func get_all_businesses() -> Array[Business]:
 func get_all_territories() -> Array[Territory]:
 	return territories.values()
 
+func get_territories() -> Array[Territory]:
+	return territories.values()
+
 func get_all_orders() -> Array[Order]:
 	return orders.values()
 

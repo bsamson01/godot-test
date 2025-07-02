@@ -19,11 +19,6 @@ class ValidationResult:
 		is_valid = is_valid and other.is_valid
 		errors.append_array(other.errors)
 		warnings.append_array(other.warnings)
-	
-	func to_string() -> String:
-		if is_valid:
-			return "Valid"
-		return "Invalid: " + ", ".join(errors)
 
 # Common validation methods
 static func validate_not_null(value, field_name: String, result: ValidationResult) -> void:

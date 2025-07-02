@@ -11,7 +11,7 @@ func _tick(_delta: float) -> Status:
 		
 	# Get all territories belonging to the faction
 	var territories = []
-	for territory in get_tree().get_nodes_in_group("territories"):
+	for territory in agent.get_tree().get_nodes_in_group("territories"):
 		if territory.has_method("get_owner") and territory.get_owner() == faction.id:
 			territories.append(territory)
 	

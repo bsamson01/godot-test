@@ -182,9 +182,9 @@ scripts/
 │   ├── ai_component.gd
 │   └── commander_ai_component.gd
 └── traits/           # Reusable traits
-    ├── identifiable.gd
-    ├── poolable.gd
-    └── validatable.gd
+	├── identifiable.gd
+	├── poolable.gd
+	└── validatable.gd
 ```
 
 ## Scalability

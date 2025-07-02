@@ -5,6 +5,8 @@ class_name Territory
 @export var name: String
 @export var faction_id: String
 @export var business_ids: Array[String] = []
+@export var center_location: Vector3 = Vector3.ZERO
+@export var radius: float = 20.0
 
 func _init():
 	id = _generate_id()
@@ -22,6 +24,8 @@ static func random_territory(owner_faction: String) -> Territory:
 
 	territory.name = names[randi() % names.size()]
 	territory.faction_id = owner_faction
+	territory.center_location = Vector3(randf_range(-100, 100), 0, randf_range(-100, 100))
+	territory.radius = randf_range(15, 30)
 
 	return territory
 	

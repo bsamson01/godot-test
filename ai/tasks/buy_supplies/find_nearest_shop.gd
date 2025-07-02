@@ -1,7 +1,7 @@
 extends BTAction
 
 func _tick(_delta: float) -> Status:
-	var shops = get_tree().get_nodes_in_group("shop")
+	var shops = agent.get_tree().get_nodes_in_group("shop")
 	if shops.is_empty():
 		push_error("No shops found in scene")
 		return FAILURE

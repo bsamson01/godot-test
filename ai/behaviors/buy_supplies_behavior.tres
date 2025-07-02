@@ -1,0 +1,48 @@
+[gd_resource type="BehaviorTree" load_steps=17 format=3 uid="uid://bytciso1d7pjc"]
+
+[ext_resource type="Script" uid="uid://bii8bmjwhipqg" path="res://ai/tasks/buy_supplies/find_nearest_shop.gd" id="1_01kqh"]
+[ext_resource type="Script" uid="uid://bkje2p7ux2awm" path="res://ai/tasks/shared/move_to_location.gd" id="2_uy1fk"]
+[ext_resource type="Script" uid="uid://b4i7c75v0nftt" path="res://ai/tasks/get_base_location.gd" id="3_2ya2r"]
+[ext_resource type="Script" uid="uid://bdudovol74pts" path="res://ai/tasks/buy_supplies/perform_buy_supplies.gd" id="3_o2k3s"]
+[ext_resource type="Script" uid="uid://8owesug2wujj" path="res://ai/tasks/buy_supplies/offload_supplies.gd" id="5_jlsco"]
+[ext_resource type="Script" uid="uid://cmpwofvqf5qid" path="res://ai/tasks/shared/complete_order.gd" id="6_j222d"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_s3mhm"]
+
+[sub_resource type="BTAction" id="BTAction_qcjhk"]
+script = ExtResource("1_01kqh")
+
+[sub_resource type="BTAction" id="BTAction_xk2a3"]
+script = ExtResource("2_uy1fk")
+location_var = "target_location"
+arrive_distance = 2.0
+
+[sub_resource type="BTAction" id="BTAction_sidlu"]
+script = ExtResource("3_o2k3s")
+buy_duration = 2.0
+supplies_amount = 10
+
+[sub_resource type="BTAction" id="BTAction_woy4u"]
+script = ExtResource("3_2ya2r")
+
+[sub_resource type="BTAction" id="BTAction_ryo56"]
+script = ExtResource("2_uy1fk")
+location_var = "target_location"
+arrive_distance = 2.0
+
+[sub_resource type="BTAction" id="BTAction_5acio"]
+script = ExtResource("5_jlsco")
+offload_duration = 1.5
+
+[sub_resource type="BTAction" id="BTAction_t3iwe"]
+script = ExtResource("6_j222d")
+
+[sub_resource type="BTSequence" id="BTSequence_qr0d5"]
+children = [SubResource("BTAction_qcjhk"), SubResource("BTAction_xk2a3"), SubResource("BTAction_sidlu"), SubResource("BTAction_woy4u"), SubResource("BTAction_ryo56"), SubResource("BTAction_5acio"), SubResource("BTAction_t3iwe")]
+
+[sub_resource type="BTSelector" id="BTSelector_e56fj"]
+children = [SubResource("BTSequence_qr0d5")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_s3mhm")
+root_task = SubResource("BTSelector_e56fj")

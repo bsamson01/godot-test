@@ -1,0 +1,75 @@
+[gd_resource type="BehaviorTree" load_steps=28 format=3 uid="uid://ggq203sx5ft1"]
+
+[ext_resource type="Script" uid="uid://bwfmao4ff27d5" path="res://ai/tasks/get_shop_location.gd" id="1_yn1hd"]
+[ext_resource type="Script" uid="uid://tqgvs08qu6sg" path="res://ai/tasks/move.gd" id="2_qcaxg"]
+[ext_resource type="Script" uid="uid://b4i7c75v0nftt" path="res://ai/tasks/get_base_location.gd" id="3_abcv2"]
+[ext_resource type="Script" uid="uid://r3cltsfl1t55" path="res://ai/tasks/get_business_location.gd" id="4_x8i4p"]
+[ext_resource type="Script" uid="uid://w0nlyihqb7q1" path="res://ai/tasks/patrol_business.gd" id="5_0dsy0"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_s3mhm"]
+
+[sub_resource type="BTAction" id="BTAction_vs2hw"]
+script = ExtResource("1_yn1hd")
+
+[sub_resource type="BTAction" id="BTAction_g2xb5"]
+script = ExtResource("2_qcaxg")
+
+[sub_resource type="BTWait" id="BTWait_2t2m8"]
+
+[sub_resource type="BTAction" id="BTAction_1xscl"]
+script = ExtResource("3_abcv2")
+
+[sub_resource type="BTAction" id="BTAction_mfot7"]
+script = ExtResource("2_qcaxg")
+
+[sub_resource type="BTWait" id="BTWait_nfpri"]
+
+[sub_resource type="BTSequence" id="BTSequence_vlsyw"]
+children = [SubResource("BTAction_vs2hw"), SubResource("BTAction_g2xb5"), SubResource("BTWait_2t2m8"), SubResource("BTAction_1xscl"), SubResource("BTAction_mfot7"), SubResource("BTWait_nfpri")]
+
+[sub_resource type="BTAction" id="BTAction_2t2m8"]
+script = ExtResource("4_x8i4p")
+
+[sub_resource type="BTAction" id="BTAction_nfpri"]
+script = ExtResource("2_qcaxg")
+
+[sub_resource type="BTRandomWait" id="BTRandomWait_vs2hw"]
+min_duration = 0.5
+
+[sub_resource type="BTAction" id="BTAction_cf6ww"]
+script = ExtResource("5_0dsy0")
+
+[sub_resource type="BTAction" id="BTAction_oglit"]
+script = ExtResource("2_qcaxg")
+
+[sub_resource type="BTSequence" id="BTSequence_vs2hw"]
+children = [SubResource("BTRandomWait_vs2hw"), SubResource("BTAction_cf6ww"), SubResource("BTAction_oglit")]
+
+[sub_resource type="BTRepeat" id="BTRepeat_4f0gm"]
+times = 5
+children = [SubResource("BTSequence_vs2hw")]
+
+[sub_resource type="BTRandomWait" id="BTRandomWait_g2xb5"]
+min_duration = 0.5
+
+[sub_resource type="BTAction" id="BTAction_4f0gm"]
+script = ExtResource("3_abcv2")
+
+[sub_resource type="BTAction" id="BTAction_iptw5"]
+script = ExtResource("2_qcaxg")
+
+[sub_resource type="BTRandomWait" id="BTRandomWait_2t2m8"]
+min_duration = 0.5
+
+[sub_resource type="BTSequence" id="BTSequence_iptw5"]
+children = [SubResource("BTAction_2t2m8"), SubResource("BTAction_nfpri"), SubResource("BTRepeat_4f0gm"), SubResource("BTRandomWait_g2xb5"), SubResource("BTAction_4f0gm"), SubResource("BTAction_iptw5"), SubResource("BTRandomWait_2t2m8")]
+
+[sub_resource type="BTRandomSelector" id="BTRandomSelector_dgfta"]
+children = [SubResource("BTSequence_vlsyw"), SubResource("BTSequence_iptw5")]
+
+[sub_resource type="BTSelector" id="BTSelector_e56fj"]
+children = [SubResource("BTRandomSelector_dgfta")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_s3mhm")
+root_task = SubResource("BTSelector_e56fj")

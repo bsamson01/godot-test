@@ -42,7 +42,11 @@ func _tick(_delta: float) -> Status:
 	blackboard.erase_var("order_data")
 	
 	# Notify faction of completion
-	EventBus.emit_signal("order_completed", current_order)
+	if Engine.has_singleton("EventBus"):
+		Engine.get_singleton("EventBus").emit_event(
+			EventBus.EventType.ORDER_COMPLETED,
+			{"order": current_order}
+		)
 	
 	if agent.has_method("set_status"):
 		agent.set_status("Order completed!")

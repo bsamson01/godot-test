@@ -4,7 +4,6 @@ class_name NormalMemberAI
 var bt_player: BTPlayer
 
 func _ready():
-	super._ready()
 	_setup_behavior_tree()
 
 func _setup_behavior_tree():
@@ -77,13 +76,13 @@ func _complete_order(member: GangMember):
 		return
 
 	match order.type:
-		Order.OrderType.BUY_SUPPLIES:
+		Order.TYPE_BUY_SUPPLIES:
 			if faction.funds >= 100:
 				faction.funds -= 100
 				faction.supplies += 3500
 				print("%s bought supplies for %s" % [member.name, faction.name])
 
-		Order.OrderType.SPY:
+		Order.TYPE_SPY:
 			var target_id = order.target_id
 			if target_id != "":
 				# Store dummy intel
@@ -93,7 +92,7 @@ func _complete_order(member: GangMember):
 				}
 				print("%s spied on %s for %s" % [member.name, target_id, faction.name])
 
-		Order.OrderType.ATTACK:
+		Order.TYPE_ATTACK_ENEMY:
 			var success = randf() < 0.6  # Simplified win chance
 			print("%s led an attack. Success: %s" % [member.name, success])
 			if success:
@@ -103,7 +102,7 @@ func _complete_order(member: GangMember):
 				faction.funds -= 500
 				faction.supplies -= 200
 
-		Order.OrderType.DEFEND:
+		Order.TYPE_DEFEND_TERRITORY:
 			print("%s organized a defensive effort for %s" % [member.name, faction.name])
 			# Slight boost to defense intel or morale
 			faction.intel["defense_readiness"] = {
@@ -111,14 +110,14 @@ func _complete_order(member: GangMember):
 				"tick": WorldState.current_tick
 			}
 
-		Order.OrderType.RECRUIT:
+		Order.TYPE_RECRUIT_MEMBERS:
 			if faction.funds >= 2000:
 				var new_member = WorldState.spawn_gang_member(faction.id)
 				faction.add_member(new_member)
 				faction.funds -= 1500
 				print("%s recruited a new member: %s" % [member.name, new_member.name])
 
-		Order.OrderType.PATROL:
+		Order.TYPE_PATROL_TERRITORY:
 			print("%s completed a patrol." % member.name)
 			# Optional: reduce chance of future attacks, or reveal nearby threats
 			faction.intel["last_patrol_tick"] = WorldState.current_tick

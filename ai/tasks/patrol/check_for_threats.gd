@@ -24,7 +24,7 @@ func _tick(delta: float) -> Status:
 	var agent_pos = agent.global_transform.origin
 	
 	# Check for enemy gang members
-	for potential_threat in get_tree().get_nodes_in_group("gang_members"):
+	for potential_threat in agent.get_tree().get_nodes_in_group("gang_members"):
 		if potential_threat == agent:
 			continue
 			

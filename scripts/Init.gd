@@ -55,4 +55,5 @@ func _create_faction() -> Faction:
 	var names = ["Red Vipers", "Night Rats", "Iron Fangs"]
 	faction.name = names[randi() % names.size()]
 	faction.color = Color(randf(), randf(), randf())
+	faction.base_location = Vector3(randf_range(-100, 100), 0, randf_range(-100, 100))
 	return faction
