@@ -6,6 +6,7 @@ class_name FactionComponent
 @export var color: Color = Color.WHITE
 @export var funds: float = 1000.0
 @export var supplies: float = 1000.0
+@export var base_location: Vector3 = Vector3.ZERO
 
 # Relationships by faction ID
 @export var relationships: Dictionary = {} # faction_id -> RelationType

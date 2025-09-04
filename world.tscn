@@ -1,6 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://bjaeqmv06in6e"]
+[gd_scene load_steps=10 format=3 uid="uid://bjaeqmv06in6e"]
 
 [ext_resource type="Script" uid="uid://hwpvh46jn6j3" path="res://main.gd" id="1_036b0"]
+[ext_resource type="PackedScene" uid="uid://bgc2ul6r5voac" path="res://test/base.tscn" id="2_1deqs"]
+[ext_resource type="PackedScene" uid="uid://dls1p48tsiqt3" path="res://test/business.tscn" id="3_1scyw"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pkg7o"]
 sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
@@ -45,3 +47,9 @@ skeleton = NodePath("../..")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/MeshInstance3D/StaticBody3D"]
 shape = SubResource("ConcavePolygonShape3D_f3sb7")
+
+[node name="Base" parent="NavigationRegion3D" instance=ExtResource("2_1deqs")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -3, 0, -3)
+
+[node name="Business" parent="NavigationRegion3D" instance=ExtResource("3_1scyw")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 3, 0, 3)
