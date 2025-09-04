@@ -16,12 +16,12 @@ var current_tick: int = 0
 
 # Configuration
 var config: Dictionary = {
-	"max_factions": 5,
+	"max_factions": 1,
 	"starting_funds": 5000.0,
 	"starting_supplies": 1000.0,
-	"members_per_faction": 3,
+	"members_per_faction": 2,
 	"territories_per_faction": 1,
-	"businesses_per_territory": 2
+	"businesses_per_territory": 1
 }
 
 # Performance monitoring

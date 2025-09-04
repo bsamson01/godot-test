@@ -93,10 +93,10 @@ func unregister_entity(entity: Entity) -> void:
 func get_entity(id: String) -> Entity:
 	return entities.get(id, null)
 
-func get_entities_by_type(type: String) -> Array[Entity]:
+func get_entities_by_type(type: String) -> Array:
 	return entities_by_type.get(type, [])
 
-func get_entities_with_component(component_name: String) -> Array[Entity]:
+func get_entities_with_component(component_name: String) -> Array:
 	return entities_by_component.get(component_name, [])
 
 func get_entities_with_components(component_names: Array[String]) -> Array[Entity]:

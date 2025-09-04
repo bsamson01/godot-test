@@ -11,7 +11,7 @@ func _ready():
 	config = GameConfig.get_default()
 	
 	# Optionally load from file
-	var config_path = "user://game_config.json"
+	var config_path = "user://game_coni.json"
 	if FileAccess.file_exists(config_path):
 		config.load_from_file(config_path)
 	
@@ -21,10 +21,21 @@ func _ready():
 		push_error("Invalid game configuration: " + validation.to_string())
 		return
 	
-	# Create game manager
+	# Create game manager first
 	game_manager = GameManager.new()
 	game_manager.name = "GameManager"
 	add_child(game_manager)
+	
+	# Initialize the game world with factions, bases, and businesses
+	# Wait one frame for GameManager to be ready
+	await get_tree().process_frame
+	var init_script = load("res://scripts/Init.gd").new()
+	init_script.init_all({
+		"faction_count": 1,  # Match GameManager config
+		"members_per_faction": 2,  # Match GameManager config
+		"businesses_per_faction": 1
+	})
+	add_child(init_script)
 	
 	# Connect to game events for UI updates
 	if Engine.has_singleton("EventBus"):
@@ -135,4 +146,4 @@ func _print_detailed_report():
 func _exit_tree():
 	# Save configuration on exit
 	if config:
-		config.save_to_file("user://game_config.json")
+		config.save_to_file("user://game_config1.json")

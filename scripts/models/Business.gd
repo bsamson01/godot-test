@@ -44,3 +44,13 @@ func get_territory() -> Territory:
 	
 func get_owner_faction() -> Faction:
 	return WorldState.get_faction(faction_id);
+
+func get_location() -> Vector3:
+	# Find the business scene in the world by looking for nodes in the "business" group
+	var business_nodes = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("business")
+	for node in business_nodes:
+		# Check if this business node has the same owner as this business
+		if node.get_meta("owner", "") == id:
+			return node.global_position
+	# Return a default position if not found
+	return Vector3.ZERO

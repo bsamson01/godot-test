@@ -102,3 +102,13 @@ func use_supplies():
 
 func _generate_id() -> String:
 	return "faction_" + str(randi())
+
+func get_base_location() -> Vector3:
+	# Find the base scene in the world by looking for nodes in the "base" group
+	var base_nodes = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("base")
+	for node in base_nodes:
+		# Check if this base node has the same owner as this faction
+		if node.get_meta("owner", "") == id:
+			return node.global_position
+	# Return the stored base_location if no scene found
+	return base_location

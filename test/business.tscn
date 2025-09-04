@@ -8,6 +8,7 @@
 transform = Transform3D(-8.74228e-09, 0, -0.2, 0, 0.2, 0, 0.2, 0, -8.74228e-09, 0, 1.1891, 0)
 mesh = ExtResource("1_v8by0")
 skeleton = NodePath("../..")
+metadata/owner = ""
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_kwi5i")

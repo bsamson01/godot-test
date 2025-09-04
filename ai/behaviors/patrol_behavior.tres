@@ -17,7 +17,6 @@ script = ExtResource("2_6cmmy")
 [sub_resource type="BTAction" id="BTAction_ao3nl"]
 script = ExtResource("3_7q2ns")
 location_var = "target_location"
-arrive_distance = 2.0
 
 [sub_resource type="BTAction" id="BTAction_tt67y"]
 script = ExtResource("4_167i1")

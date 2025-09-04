@@ -347,13 +347,17 @@ func _on_order_cancelled(event: EventBus.Event) -> void:
 		# Handle any cleanup if needed
 		pass
 
-# Factory method for creating random gang members
+# Static factory method for creating random members
 static func create_random() -> Dictionary:
+	var names = ["Ghost", "Snake", "Viper", "Blaze", "Razor", "Shadow", "Steel", "Flame"]
+	var roles = AVAILABLE_ROLES
+	var personalities = AVAILABLE_PERSONALITIES
+	
 	return {
-		"name": _get_random_name(),
-		"role": AVAILABLE_ROLES[randi() % AVAILABLE_ROLES.size()],
-		"loyalty": randf_range(60, 90),
-		"personality": AVAILABLE_PERSONALITIES[randi() % AVAILABLE_PERSONALITIES.size()]
+		"name": names[randi() % names.size()],
+		"role": roles[randi() % roles.size()],
+		"loyalty": randf_range(70, 100),
+		"personality": personalities[randi() % personalities.size()]
 	}
 
 static func _get_random_name() -> String:

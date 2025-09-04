@@ -14,6 +14,7 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 mesh = SubResource("PlaneMesh_p6kws")
 skeleton = NodePath("../..")
 surface_material_override/0 = SubResource("StandardMaterial3D_p6kws")
+metadata/owner = ""
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(-3.71489e-08, 0, 0.0334734, 0, 0.169977, 0, -0.849868, 0, -1.46317e-09, -0.998292, 0.0870906, 0)
@@ -35,3 +36,7 @@ mesh = SubResource("BoxMesh_175jt")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
 shape = SubResource("ConvexPolygonShape3D_p6kws")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.334481, -0.942402, 0, 0.942402, 0.334481, 0, 0.152796, 0)
+text = "Not Assigned"

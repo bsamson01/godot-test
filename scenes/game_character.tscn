@@ -1,0 +1,39 @@
+[gd_scene load_steps=7 format=3 uid="uid://cmfm8a7fwf1ui"]
+
+[ext_resource type="Script" uid="uid://c0vdadoerycsl" path="res://scripts/game_character.gd" id="1_7tera"]
+[ext_resource type="BehaviorTree" uid="uid://bytciso1d7pjc" path="res://ai/behaviors/buy_supplies_behavior.tres" id="2_7tera"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_qqgw4"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_s3mhm"]
+albedo_color = Color(0.509804, 1, 1, 1)
+metallic = 0.56
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wvbbu"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_wvbbu"]
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+script = ExtResource("1_7tera")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0079, 0)
+mesh = SubResource("CapsuleMesh_qqgw4")
+surface_material_override/0 = SubResource("StandardMaterial3D_s3mhm")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 2.00019, 0, 0, 0, 1, 0, 1.0079, 0)
+shape = SubResource("BoxShape3D_wvbbu")
+
+[node name="BTPlayer" type="BTPlayer" parent="."]
+behavior_tree = ExtResource("2_7tera")
+blackboard_plan = SubResource("BlackboardPlan_wvbbu")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.1
+path_max_distance = 0.01
+
+[node name="childStatus" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.370606, 0.92879, 0, -0.92879, 0.370606, 0, 2.32997, 0)
+modulate = Color(1, 0.133333, 1, 1)
+text = "Doing nothing"
