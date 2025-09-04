@@ -63,10 +63,16 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 	var commander = _create_gang_member_ecs(faction_entity.id, GangMemberComponent.ROLE_COMMANDER, entity_manager)
 	faction_comp.add_member(commander)
 	
+	# Create visual node for commander
+	_create_gang_member_visual_node(commander, faction_comp.base_location, faction_comp.color)
+	
 	# Create regular members
 	for j in range(config.members_per_faction - 1):
 		var member = _create_gang_member_ecs(faction_entity.id, "", entity_manager)
 		faction_comp.add_member(member)
+		
+		# Create visual node for member
+		_create_gang_member_visual_node(member, faction_comp.base_location, faction_comp.color)
 	
 	# Create territories
 	for i in range(config.territories_per_faction):
@@ -155,3 +161,59 @@ func _get_unassigned_businesses() -> Array:
 		if owner == "":
 			unassigned_businesses.append(business_node)
 	return unassigned_businesses
+
+func _create_gang_member_visual_node(member_entity: Entity, base_location: Vector3, faction_color: Color):
+	# Get the gang member component
+	var member_comp = member_entity.get_component("GangMemberComponent")
+	if not member_comp:
+		print("ERROR: Gang member entity missing GangMemberComponent")
+		return
+	
+	# Create visual node using the existing player scene
+	var member_scene = preload("res://test/player.tscn")
+	var member_node = member_scene.instantiate()
+	
+	# Position near the base with some random offset
+	var spawn_pos = base_location + Vector3(randf_range(-3, 3), 0, randf_range(-3, 3))
+	member_node.position = spawn_pos
+	
+	# Add to scene - use get_parent() since Init script is a child of the main scene
+	var parent_scene = get_parent()
+	if parent_scene:
+		parent_scene.add_child(member_node)
+	else:
+		# Fallback: try to get the main scene using Engine
+		var main_scene = Engine.get_main_loop().get_root()
+		if main_scene:
+			main_scene.add_child(member_node)
+		else:
+			print("ERROR: Could not find parent scene to add gang member")
+			return
+	
+	# Set member reference
+	member_node.member_id = member_entity.id
+	
+	# Add to gang members group
+	member_node.add_to_group("gang_members")
+	
+	# Set faction color
+	if member_node.has_node("MeshInstance3D"):
+		var mesh = member_node.get_node("MeshInstance3D")
+		if mesh and mesh.get_surface_override_material_count() > 0:
+			var material = mesh.get_surface_override_material(0)
+			if material:
+				material.albedo_color = faction_color
+	
+	# Register node with WorldState
+	if Engine.has_singleton("WorldState"):
+		var world_state = Engine.get_singleton("WorldState")
+		world_state.register_gang_member_node(member_node)
+	
+	# Initialize AI with behavior tree
+	if member_node.has_node("BTPlayer"):
+		var bt_player = member_node.get_node("BTPlayer")
+		var behavior_tree = load("res://ai/tres/test.tres")
+		bt_player.behavior_tree = behavior_tree
+		bt_player.blackboard.set_var("member_id", member_entity.id)
+	
+	print("Created visual node for gang member: %s" % member_comp.member_name)

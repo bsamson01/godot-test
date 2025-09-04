@@ -10,19 +10,19 @@ func get_component_name() -> String:
 	return "Component"
 
 # Called when component is attached to an entity
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	pass
 
 # Called when component is detached from an entity
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	pass
 
 # Called every frame if component is enabled
-func update(delta: float) -> void:
+func update(_delta: float) -> void:
 	pass
 
 # Called for fixed timestep updates
-func fixed_update(delta: float) -> void:
+func fixed_update(_delta: float) -> void:
 	pass
 
 func set_enabled(enabled: bool) -> void:

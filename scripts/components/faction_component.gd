@@ -24,14 +24,14 @@ var supply_consumption_rate: float = 0.0
 var intel: Dictionary = {} # faction_id -> intel_data
 
 # Cached references
-var _member_entities: Array[Entity] = []
-var _territory_entities: Array[Entity] = []
-var _business_entities: Array[Entity] = []
+var _member_entities: Array = []
+var _territory_entities: Array = []
+var _business_entities: Array = []
 
 func get_component_name() -> String:
 	return "FactionComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	# Validate initial state
 	var result = validate()
 	if not result.is_valid:
@@ -44,7 +44,7 @@ func _on_attached(entity: Entity) -> void:
 		event_bus.subscribe(EventBus.EventType.FACTION_MEMBER_REMOVED, _on_member_removed)
 		event_bus.subscribe(EventBus.EventType.BUSINESS_INCOME_GENERATED, _on_income_generated)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	# Unsubscribe from events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
@@ -192,13 +192,13 @@ func set_relationship(other_faction_id: String, relation: RelationType) -> void:
 		"relation": RelationType.keys()[relation]
 	})
 
-func get_members() -> Array[Entity]:
+func get_members() -> Array:
 	return _member_entities
 
-func get_territories() -> Array[Entity]:
+func get_territories() -> Array:
 	return _territory_entities
 
-func get_businesses() -> Array[Entity]:
+func get_businesses() -> Array:
 	return _business_entities
 
 func add_member(member_entity: Entity) -> void:

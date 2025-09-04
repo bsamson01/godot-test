@@ -23,14 +23,14 @@ var contesting_faction_id: String = ""
 func get_component_name() -> String:
 	return "TerritoryComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	# Subscribe to territory events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.subscribe(EventBus.EventType.BUSINESS_CAPTURED, _on_business_captured)
 		event_bus.subscribe(EventBus.EventType.BUSINESS_DESTROYED, _on_business_destroyed)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.unsubscribe(EventBus.EventType.BUSINESS_CAPTURED, _on_business_captured)
@@ -144,8 +144,8 @@ func _update_territory_stats() -> void:
 	var safety_penalty = business_count * 0.05
 	safety_level = max(0.1, safety_level - safety_penalty)
 
-func get_businesses() -> Array[Entity]:
-	var businesses: Array[Entity] = []
+func get_businesses() -> Array:
+	var businesses: Array = []
 	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
 	
 	if entity_manager:

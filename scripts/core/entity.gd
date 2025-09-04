@@ -2,7 +2,6 @@
 extends Resource
 class_name Entity
 
-signal entity_created(entity: Entity)
 signal entity_destroyed(entity: Entity)
 signal component_added(entity: Entity, component: Component)
 signal component_removed(entity: Entity, component: Component)

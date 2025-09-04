@@ -30,11 +30,11 @@ func _tick(_delta: float) -> Status:
 	
 	# Get nearest threat
 	var nearest_threat = threats[0]
-	var threat_distance = nearest_threat.distance
+	var _threat_distance = nearest_threat.distance
 	
 	# Strategy based on health and threat level
 	var health_percentage = member.get_health_percentage()
-	var threat_level = blackboard.get_var("threat_level") or 0.0
+	var _threat_level = blackboard.get_var("threat_level") or 0.0
 	
 	if health_percentage < 0.3:
 		# Very low health - focus on evasion and cover
@@ -173,7 +173,7 @@ func _calculate_cover_score(position: Vector3, threat_pos: Vector3) -> float:
 	# Check for obstacles between position and threat (simplified)
 	# In a real game, you'd do proper raycasting
 	var direction = (threat_pos - position).normalized()
-	var obstacle_check = position + (direction * 10.0)
+	var _obstacle_check = position + (direction * 10.0)
 	
 	# Simulate some cover based on position
 	if position.y > threat_pos.y:

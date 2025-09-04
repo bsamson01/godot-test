@@ -53,7 +53,7 @@ const AVAILABLE_PERSONALITIES = [PERSONALITY_LOYAL, PERSONALITY_GREEDY, PERSONAL
 func get_component_name() -> String:
 	return "GangMemberComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	# Validate initial state
 	var result = validate()
 	if not result.is_valid:
@@ -66,7 +66,7 @@ func _on_attached(entity: Entity) -> void:
 		event_bus.subscribe(EventBus.EventType.ORDER_FAILED, _on_order_failed)
 		event_bus.subscribe(EventBus.EventType.ORDER_CANCELLED, _on_order_cancelled)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	# Unsubscribe from events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")

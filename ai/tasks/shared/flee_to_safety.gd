@@ -119,12 +119,12 @@ func _calculate_safety_score(location: Vector3, faction_id: String) -> float:
 				safety_score -= (15.0 - distance) / 15.0 * 0.5  # Reduce safety by up to 50%
 	
 	# Check if in friendly territory
-	var in_friendly_territory = false
+	var _in_friendly_territory = false
 	for territory in WorldState.get_territories():
 		if territory.faction_id == faction_id:
 			var distance = location.distance_to(territory.center_location)
 			if distance <= territory.radius:
-				in_friendly_territory = true
+				_in_friendly_territory = true
 				safety_score += 0.3  # Bonus for being in friendly territory
 				break
 	

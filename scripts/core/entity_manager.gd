@@ -125,10 +125,10 @@ func create_entity(entity_type: String) -> Entity:
 		return entity
 	
 	# Create new entity
-	var entity = Entity.new()
-	entity.entity_type = entity_type
-	register_entity(entity)
-	return entity
+	var new_entity = Entity.new()
+	new_entity.entity_type = entity_type
+	register_entity(new_entity)
+	return new_entity
 
 func return_to_pool(entity: Entity) -> void:
 	if not entity or entity.is_destroyed():

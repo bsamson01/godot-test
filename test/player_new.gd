@@ -4,6 +4,7 @@ const SPEED = 3
 @onready var nav_agent = $NavigationAgent3D
 @onready var childLabel = $childStatus
 @export var targ: Vector3
+var member_id: String = ""
 
 func _physics_process(delta: float) -> void:
 	# Add the gravity.

@@ -42,7 +42,7 @@ var success_chance: float = 0.8
 func get_component_name() -> String:
 	return "OrderComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	issued_at = Time.get_ticks_msec() / 1000.0
 	_calculate_requirements()
 	
@@ -52,7 +52,7 @@ func _on_attached(entity: Entity) -> void:
 		event_bus.subscribe(EventBus.EventType.ORDER_ASSIGNED, _on_order_assigned)
 		event_bus.subscribe(EventBus.EventType.ORDER_COMPLETED, _on_order_completed)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	# Unsubscribe from events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")

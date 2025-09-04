@@ -26,13 +26,14 @@ func _ready():
 	game_manager.name = "GameManager"
 	add_child(game_manager)
 	
-	# Initialize the game world with factions, bases, and businesses
 	# Wait one frame for GameManager to be ready
 	await get_tree().process_frame
+	
+	# Initialize the game world with factions, bases, and businesses
 	var init_script = load("res://scripts/Init.gd").new()
 	init_script.init_all({
 		"faction_count": 1,  # Match GameManager config
-		"members_per_faction": 2,  # Match GameManager config
+		"members_per_faction": 4,  # Changed to 4 gang members
 		"businesses_per_faction": 1
 	}, game_manager)
 	add_child(init_script)

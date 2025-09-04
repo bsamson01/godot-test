@@ -134,14 +134,30 @@ func _open_log_file() -> void:
 func set_log_level(level: LogLevel) -> void:
 	current_log_level = level
 
-func get_logs(level: LogLevel = -1, category: String = "", limit: int = 100) -> Array[Dictionary]:
+func get_logs(level: LogLevel = LogLevel.DEBUG, category: String = "", limit: int = 100) -> Array[Dictionary]:
 	var filtered: Array[Dictionary] = []
 	
 	for i in range(log_entries.size() - 1, -1, -1):
 		var entry = log_entries[i]
 		
-		if level != -1 and entry.level != level:
+		if entry.level != level:
 			continue
+		
+		if not category.is_empty() and entry.category != category:
+			continue
+		
+		filtered.append(entry)
+		
+		if filtered.size() >= limit:
+			break
+	
+	return filtered
+
+func get_all_logs(category: String = "", limit: int = 100) -> Array[Dictionary]:
+	var filtered: Array[Dictionary] = []
+	
+	for i in range(log_entries.size() - 1, -1, -1):
+		var entry = log_entries[i]
 		
 		if not category.is_empty() and entry.category != category:
 			continue
@@ -155,18 +171,18 @@ func get_logs(level: LogLevel = -1, category: String = "", limit: int = 100) -> 
 
 func get_error_summary() -> Dictionary:
 	var errors = get_logs(LogLevel.ERROR, "", 50)
-	var critical = get_logs(LogLevel.CRITICAL, "", 50)
+	var critical_entries = get_logs(LogLevel.CRITICAL, "", 50)
 	
 	var summary = {
 		"total_errors": log_counts[LogLevel.ERROR],
 		"total_critical": log_counts[LogLevel.CRITICAL],
 		"recent_errors": errors,
-		"recent_critical": critical,
+		"recent_critical": critical_entries,
 		"error_categories": {}
 	}
 	
 	# Count errors by category
-	for entry in errors + critical:
+	for entry in errors + critical_entries:
 		var cat = entry.category
 		if not summary.error_categories.has(cat):
 			summary.error_categories[cat] = 0

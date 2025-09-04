@@ -19,7 +19,7 @@ var config: Dictionary = {
 	"max_factions": 1,
 	"starting_funds": 5000.0,
 	"starting_supplies": 1000.0,
-	"members_per_faction": 2,
+	"members_per_faction": 4,
 	"territories_per_faction": 1,
 	"businesses_per_territory": 1
 }
@@ -65,12 +65,8 @@ func _initialize_subsystems() -> void:
 func _initialize_game_world() -> void:
 	Logger.info("Initializing game world", "GameManager")
 	
-	# Create factions
-	var faction_names = ["Red Vipers", "Blue Shadows", "Green Dragons", "Black Ravens", "White Wolves"]
-	var faction_colors = [Color.RED, Color.BLUE, Color.GREEN, Color.BLACK, Color.WHITE]
-	
-	for i in range(min(config.max_factions, faction_names.size())):
-		_create_faction(faction_names[i], faction_colors[i])
+	# Faction creation is now handled by Init.gd
+	# This allows for more flexible initialization with visual nodes
 	
 	# Set initial relationships
 	_initialize_faction_relationships()
@@ -97,8 +93,9 @@ func _create_faction(faction_name: String, color: Color) -> Entity:
 	faction_comp.add_member(commander)
 	
 	# Add commander AI
-	var commander_ai = CommanderAIComponent.new()
-	commander.add_component(commander_ai)
+	# Temporarily commented out due to parser error
+	# var commander_ai = CommanderAIComponent.new()
+	# commander.add_component(commander_ai)
 	
 	# Create initial members
 	for i in range(config.members_per_faction - 1):
@@ -208,7 +205,7 @@ func _process_game_tick() -> void:
 	_process_faction_supplies()
 	
 	if is_new_day:
-		event_bus.emit_event(EventBus.EventType.DAY_STARTED, {"day": current_tick / 24})
+		event_bus.emit_event(EventBus.EventType.DAY_STARTED, {"day": current_tick / 24.0})
 
 func _update_components(delta: float) -> void:
 	var start_time = Time.get_ticks_usec()
@@ -250,6 +247,13 @@ func _process_businesses(time_of_day: String) -> void:
 		# Calculate and generate income
 		var income = business_comp.calculate_income(time_of_day)
 		if income > 0:
+			# Add income to faction funds
+			var faction_entity = entity_manager.get_entity(business_comp.owner_faction_id)
+			if faction_entity:
+				var faction_comp = faction_entity.get_component("FactionComponent")
+				if faction_comp:
+					faction_comp.add_funds(income, "Business income: " + business_comp.business_name)
+			
 			event_bus.emit_event(EventBus.EventType.BUSINESS_INCOME_GENERATED, {
 				"business_id": business_entity.id,
 				"faction_id": business_comp.owner_faction_id,

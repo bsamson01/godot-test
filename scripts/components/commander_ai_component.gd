@@ -3,7 +3,7 @@ extends AIComponent
 class_name CommanderAIComponent
 
 # Order queue management
-var order_queue: Array[Entity] = []
+var order_queue: Array = []
 var max_queue_size: int = 10
 var orders_issued_today: int = 0
 
@@ -30,13 +30,25 @@ func _ready():
 	decision_interval = 5.0  # Commanders think less frequently but more deeply
 
 func _update_cached_state() -> void:
-	var faction_comp = entity.get_component("FactionComponent")
-	if not faction_comp:
-		Logger.error("Commander AI missing faction component", "AI")
+	# Get the gang member component to access faction_id
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		Logger.error("Commander AI missing gang member component", "AI")
 		return
 	
 	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
 	if not entity_manager:
+		return
+	
+	# Find the faction entity using the faction_id
+	var faction_entity = entity_manager.get_entity(member_comp.faction_id)
+	if not faction_entity:
+		Logger.error("Commander AI could not find faction entity: " + member_comp.faction_id, "AI")
+		return
+	
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp:
+		Logger.error("Commander AI faction entity missing faction component", "AI")
 		return
 	
 	# Cache faction state
@@ -278,8 +290,18 @@ func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", 
 	order_entity.add_component(order_comp)
 	
 	# Validate order can be executed
-	var faction_comp = entity.get_component("FactionComponent")
-	if not order_comp.can_be_executed_by(faction_comp):
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		entity_manager.mark_for_destruction(order_entity)
+		return false
+	
+	var faction_entity = entity_manager.get_entity(member_comp.faction_id)
+	if not faction_entity:
+		entity_manager.mark_for_destruction(order_entity)
+		return false
+	
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp or not order_comp.can_be_executed_by(faction_comp):
 		entity_manager.mark_for_destruction(order_entity)
 		return false
 	
@@ -301,7 +323,7 @@ func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", 
 			{
 				"order_id": order_entity.id,
 				"order_type": order_type,
-				"faction_id": faction_comp.entity.id,
+				"faction_id": faction_entity.id,
 				"commander_id": entity.id
 			}
 		)
@@ -312,12 +334,26 @@ func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", 
 	return true
 
 func _assign_orders_to_members() -> void:
-	var faction_comp = entity.get_component("FactionComponent")
+	# Get the gang member component to access faction_id
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		return
+	
+	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
+	if not entity_manager:
+		return
+	
+	# Find the faction entity using the faction_id
+	var faction_entity = entity_manager.get_entity(member_comp.faction_id)
+	if not faction_entity:
+		return
+	
+	var faction_comp = faction_entity.get_component("FactionComponent")
 	if not faction_comp:
 		return
 	
 	# Get available members
-	var available_members: Array[Entity] = []
+	var available_members: Array = []
 	for member_entity in faction_comp.get_members():
 		var member_comp = member_entity.get_component("GangMemberComponent")
 		if member_comp and member_comp.is_available() and member_comp.role != GangMemberComponent.ROLE_COMMANDER:
@@ -334,7 +370,7 @@ func _assign_orders_to_members() -> void:
 	)
 	
 	# Assign orders
-	var assigned_orders: Array[Entity] = []
+	var assigned_orders: Array = []
 	
 	for order_entity in order_queue:
 		if available_members.is_empty():
@@ -370,7 +406,7 @@ func _assign_orders_to_members() -> void:
 	for order in assigned_orders:
 		order_queue.erase(order)
 
-func _select_member_for_order(members: Array[Entity], order_comp: OrderComponent) -> Entity:
+func _select_member_for_order(members: Array, order_comp: OrderComponent) -> Entity:
 	# Select best member based on order type and member attributes
 	var best_member = null
 	var best_score = -1.0
@@ -402,7 +438,7 @@ func _select_member_for_order(members: Array[Entity], order_comp: OrderComponent
 
 func _cleanup_order_queue() -> void:
 	# Remove completed, failed, or invalid orders
-	var valid_orders: Array[Entity] = []
+	var valid_orders: Array = []
 	
 	for order_entity in order_queue:
 		if order_entity.is_destroyed():

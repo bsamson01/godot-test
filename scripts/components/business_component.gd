@@ -31,13 +31,13 @@ var protection_level: float = 0.5  # How well protected the business is
 func get_component_name() -> String:
 	return "BusinessComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	# Subscribe to business events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.subscribe(EventBus.EventType.DAMAGE_DEALT, _on_damage_dealt)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.unsubscribe(EventBus.EventType.DAMAGE_DEALT, _on_damage_dealt)

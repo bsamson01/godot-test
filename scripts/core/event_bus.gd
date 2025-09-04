@@ -52,10 +52,10 @@ class Event:
 	var timestamp: float
 	var sender: Object = null
 	
-	func _init(type: EventType, data: Dictionary = {}, priority: int = 0):
-		self.type = type
-		self.data = data
-		self.priority = priority
+	func _init(event_type: EventType, event_data: Dictionary = {}, event_priority: int = 0):
+		self.type = event_type
+		self.data = event_data
+		self.priority = event_priority
 		self.timestamp = Time.get_ticks_msec() / 1000.0
 
 # Event queue with priority
@@ -164,10 +164,8 @@ func _dispatch_event(event: Event) -> void:
 	
 	events_processed += 1
 
-func get_event_history(event_type: EventType = -1, limit: int = 100) -> Array[Event]:
-	if event_type == -1:
-		return event_history.slice(-limit)
-	
+func get_event_history(event_type: EventType = EventType.ENTITY_CREATED, limit: int = 100) -> Array[Event]:
+	# Filter by specific event type
 	var filtered: Array[Event] = []
 	for event in event_history:
 		if event.type == event_type:
@@ -175,6 +173,9 @@ func get_event_history(event_type: EventType = -1, limit: int = 100) -> Array[Ev
 			if filtered.size() >= limit:
 				break
 	return filtered
+
+func get_all_event_history(limit: int = 100) -> Array[Event]:
+	return event_history.slice(-limit)
 
 func clear_queue() -> void:
 	event_queue.clear()

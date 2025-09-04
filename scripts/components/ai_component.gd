@@ -23,13 +23,13 @@ var cache_valid_until: float = 0.0
 func get_component_name() -> String:
 	return "AIComponent"
 
-func _on_attached(entity: Entity) -> void:
+func _on_attached(_entity: Entity) -> void:
 	# Subscribe to AI-relevant events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.subscribe(EventBus.EventType.AI_STATE_CHANGED, _on_ai_state_changed)
 
-func _on_detached(entity: Entity) -> void:
+func _on_detached(_entity: Entity) -> void:
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.unsubscribe(EventBus.EventType.AI_STATE_CHANGED, _on_ai_state_changed)
