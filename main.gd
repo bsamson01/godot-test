@@ -34,7 +34,8 @@ func _ready():
 	init_script.init_all({
 		"faction_count": 1,  # Match GameManager config
 		"members_per_faction": 4,  # Changed to 4 gang members
-		"businesses_per_faction": 1
+		"territories_per_faction": 1,
+		"businesses_per_territory": 2  # Create 2 businesses per territory
 	}, game_manager)
 	add_child(init_script)
 	

@@ -66,31 +66,33 @@ func get_priority() -> int:
 func get_travel_time() -> int:
 	if data.has("travel_time"):
 		return data["travel_time"]
+	# Return travel time in seconds (realistic values)
 	match type:
-		TYPE_DEFEND_TERRITORY: return 1
-		TYPE_BUY_SUPPLIES: return 5
-		TYPE_SELL_GOODS: return 5
-		TYPE_SPY: return 4
-		TYPE_ATTACK_ENEMY: return 5
-		TYPE_RECRUIT_MEMBERS: return 3
-		TYPE_PATROL_TERRITORY: return 2
-		TYPE_COLLECT_PROTECTION: return 4
-		TYPE_SCOUT_ENEMY: return 6
+		TYPE_DEFEND_TERRITORY: return 2  # 2 seconds to reach territory
+		TYPE_BUY_SUPPLIES: return 5      # 5 seconds to reach shop
+		TYPE_SELL_GOODS: return 5        # 5 seconds to reach market
+		TYPE_SPY: return 4               # 4 seconds to reach target
+		TYPE_ATTACK_ENEMY: return 5      # 5 seconds to reach enemy
+		TYPE_RECRUIT_MEMBERS: return 3   # 3 seconds to reach recruitment area
+		TYPE_PATROL_TERRITORY: return 2  # 2 seconds to reach patrol area
+		TYPE_COLLECT_PROTECTION: return 4 # 4 seconds to reach business
+		TYPE_SCOUT_ENEMY: return 6       # 6 seconds to reach enemy territory
 		_: return 5
 
 func get_work_time() -> int:
 	if data.has("work_time"):
 		return data["work_time"]
+	# Return work time in seconds (realistic values)
 	match type:
-		TYPE_DEFEND_TERRITORY: return 10
-		TYPE_BUY_SUPPLIES: return 2
-		TYPE_SELL_GOODS: return 2
-		TYPE_SPY: return 5
-		TYPE_ATTACK_ENEMY: return 6
-		TYPE_RECRUIT_MEMBERS: return 4
-		TYPE_PATROL_TERRITORY: return 8
-		TYPE_COLLECT_PROTECTION: return 3
-		TYPE_SCOUT_ENEMY: return 10
+		TYPE_DEFEND_TERRITORY: return 10  # 10 seconds defending
+		TYPE_BUY_SUPPLIES: return 3       # 3 seconds to buy supplies
+		TYPE_SELL_GOODS: return 3         # 3 seconds to sell goods
+		TYPE_SPY: return 5                # 5 seconds to gather intel
+		TYPE_ATTACK_ENEMY: return 6       # 6 seconds to attack
+		TYPE_RECRUIT_MEMBERS: return 4    # 4 seconds to recruit
+		TYPE_PATROL_TERRITORY: return 8   # 8 seconds patrolling
+		TYPE_COLLECT_PROTECTION: return 3 # 3 seconds to collect
+		TYPE_SCOUT_ENEMY: return 10       # 10 seconds scouting
 		_: return 3
 
 func get_return_time() -> int:

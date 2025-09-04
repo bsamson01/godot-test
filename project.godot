@@ -18,7 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GlobalClock="*res://scripts/systems/Clock.gd"
-WorldState="*res://WorldState.gd"
+WorldState="*res://WorldState.gd"  # Minimal stub for compatibility
 
 [global_group]
 

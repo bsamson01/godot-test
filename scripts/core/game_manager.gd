@@ -21,7 +21,11 @@ var config: Dictionary = {
 	"starting_supplies": 1000.0,
 	"members_per_faction": 4,
 	"territories_per_faction": 1,
-	"businesses_per_territory": 1
+	"businesses_per_territory": 1,
+	"spawn_radius_min": 5.0,
+	"spawn_radius_max": 15.0,
+	"min_distance_between_members": 2.0,
+	"max_spawn_attempts": 20
 }
 
 # Performance monitoring
@@ -123,8 +127,11 @@ func _create_faction(faction_name: String, color: Color) -> Entity:
 func _create_gang_member(faction_id: String, role: String = "") -> Entity:
 	var member_entity = entity_manager.create_entity("gang_member")
 	
+	# Get existing member names in this faction to avoid duplicates
+	var existing_names = _get_faction_member_names(faction_id)
+	
 	# Generate random member data
-	var member_data = GangMemberComponent.create_random()
+	var member_data = GangMemberComponent.create_random(existing_names)
 	
 	# Add gang member component
 	var member_comp = GangMemberComponent.new()
@@ -136,6 +143,18 @@ func _create_gang_member(faction_id: String, role: String = "") -> Entity:
 	member_entity.add_component(member_comp)
 	
 	return member_entity
+
+func _get_faction_member_names(faction_id: String) -> Array:
+	var existing_names = []
+	var faction_entity = entity_manager.get_entity(faction_id)
+	if faction_entity:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp:
+			for member_entity in faction_comp.get_members():
+				var member_comp = member_entity.get_component("GangMemberComponent")
+				if member_comp:
+					existing_names.append(member_comp.member_name)
+	return existing_names
 
 func _create_territory(faction_id: String, territory_name: String) -> Entity:
 	var territory_entity = entity_manager.create_entity("territory")
@@ -205,6 +224,13 @@ func _process_game_tick() -> void:
 	_process_faction_supplies()
 	
 	if is_new_day:
+		# Reset period stats for all factions
+		var factions = entity_manager.get_entities_with_component("FactionComponent")
+		for faction_entity in factions:
+			var faction_comp = faction_entity.get_component("FactionComponent")
+			if faction_comp:
+				faction_comp.reset_period_stats()
+		
 		event_bus.emit_event(EventBus.EventType.DAY_STARTED, {"day": current_tick / 24.0})
 
 func _update_components(delta: float) -> void:
@@ -214,9 +240,14 @@ func _update_components(delta: float) -> void:
 	# Update all entities with AI components (both base AIComponent and CommanderAIComponent)
 	var entities_to_update = entity_manager.get_entities_with_component("AIComponent")
 	var commander_entities = entity_manager.get_entities_with_component("CommanderAIComponent")
+	var gang_member_entities = entity_manager.get_entities_with_component("GangMemberComponent")
 	
-	# Combine both lists and remove duplicates
+	# Combine all lists and remove duplicates
 	for entity in commander_entities:
+		if not entities_to_update.has(entity):
+			entities_to_update.append(entity)
+	
+	for entity in gang_member_entities:
 		if not entities_to_update.has(entity):
 			entities_to_update.append(entity)
 	
@@ -239,6 +270,13 @@ func _update_components(delta: float) -> void:
 func _process_businesses(time_of_day: String) -> void:
 	var businesses = entity_manager.get_entities_with_component("BusinessComponent")
 	
+	# Debug: Log business count
+	if businesses.size() == 0:
+		Logger.warning("No businesses found for income generation", "GameManager")
+		return
+	
+	Logger.debug("Processing %d businesses for income generation" % businesses.size(), "GameManager")
+	
 	for business_entity in businesses:
 		var business_comp = business_entity.get_component("BusinessComponent")
 		if not business_comp:
@@ -246,6 +284,18 @@ func _process_businesses(time_of_day: String) -> void:
 		
 		# Calculate and generate income
 		var income = business_comp.calculate_income(time_of_day)
+		
+		# Debug: Log business income calculation
+		Logger.debug("Business income calculation", "GameManager", {
+			"business_name": business_comp.business_name,
+			"business_type": business_comp.business_type,
+			"base_income": business_comp.base_income,
+			"operational": business_comp.operational,
+			"damage_level": business_comp.damage_level,
+			"time_of_day": time_of_day,
+			"calculated_income": income
+		})
+		
 		if income > 0:
 			# Add income to faction funds
 			var faction_entity = entity_manager.get_entity(business_comp.owner_faction_id)
@@ -253,6 +303,17 @@ func _process_businesses(time_of_day: String) -> void:
 				var faction_comp = faction_entity.get_component("FactionComponent")
 				if faction_comp:
 					faction_comp.add_funds(income, "Business income: " + business_comp.business_name)
+					Logger.info("Business income added to faction", "GameManager", {
+						"business": business_comp.business_name,
+						"faction": faction_comp.faction_name,
+						"amount": income,
+						"new_funds": faction_comp.funds
+					})
+			else:
+				Logger.warning("Faction not found for business income", "GameManager", {
+					"business": business_comp.business_name,
+					"faction_id": business_comp.owner_faction_id
+				})
 			
 			event_bus.emit_event(EventBus.EventType.BUSINESS_INCOME_GENERATED, {
 				"business_id": business_entity.id,
@@ -319,6 +380,9 @@ func _on_order_completed(event: EventBus.Event) -> void:
 				if faction_comp:
 					faction_comp.add_member(new_member)
 					
+					# Create visual node for the new member
+					_create_gang_member_visual_node(new_member, faction_comp.base_location, faction_comp.color)
+					
 					Logger.info("New member recruited", "GameManager", {
 						"faction": faction_comp.faction_name,
 						"member": new_member.get_component("GangMemberComponent").member_name
@@ -361,6 +425,164 @@ func _print_daily_report(day: int) -> void:
 				member_stats.append(member_comp.get_stats())
 		
 		Logger.info("Members: %d" % member_stats.size(), "GameManager", {"members": member_stats})
+
+func _create_gang_member_visual_node(member_entity: Entity, base_location: Vector3, faction_color: Color):
+	# Get the gang member component
+	var member_comp = member_entity.get_component("GangMemberComponent")
+	if not member_comp:
+		Logger.error("Gang member entity missing GangMemberComponent", "GameManager")
+		return
+	
+	# Create visual node using the existing player scene
+	var member_scene = preload("res://test/player.tscn")
+	var member_node = member_scene.instantiate()
+	
+	# Find a good spawn position using improved algorithm
+	var spawn_pos = _find_optimal_spawn_position(base_location, member_entity.id)
+	member_node.position = spawn_pos
+	
+	# Character scale is now properly set in the scene files
+	# No need for additional scaling
+	
+	# Debug: Print spawn position
+	Logger.info("Spawning gang member at position: %s" % spawn_pos, "GameManager")
+	
+	# Add to the World Node3D - GameManager is a child of World
+	var world_scene = get_parent()  # This should be the World Node3D
+	if world_scene and world_scene is Node3D:
+		world_scene.add_child(member_node)
+		Logger.info("Added gang member to World scene: %s" % world_scene.name, "GameManager")
+	else:
+		# Fallback: try to get the main scene using Engine
+		var main_scene = Engine.get_main_loop().get_root()
+		if main_scene:
+			main_scene.add_child(member_node)
+			Logger.info("Added gang member to main scene: %s" % main_scene.name, "GameManager")
+		else:
+			Logger.error("Could not find World scene to add gang member", "GameManager")
+			return
+	
+	# Set member reference
+	member_node.member_id = member_entity.id
+	
+	# Add to gang members group
+	member_node.add_to_group("gang_members")
+	
+	# Set faction color
+	if member_node.has_node("MeshInstance3D"):
+		var mesh = member_node.get_node("MeshInstance3D")
+		if mesh and mesh.get_surface_override_material_count() > 0:
+			var material = mesh.get_surface_override_material(0)
+			if material:
+				material.albedo_color = faction_color
+				Logger.info("Set faction color for gang member: %s" % faction_color, "GameManager")
+			else:
+				Logger.warning("Gang member mesh has no material", "GameManager")
+		else:
+			Logger.warning("Gang member mesh has no surface material overrides", "GameManager")
+		# Debug mesh properties
+		Logger.info("Gang member mesh scale: %s, visible: %s" % [mesh.scale, mesh.visible], "GameManager")
+	else:
+		Logger.warning("Gang member node missing MeshInstance3D", "GameManager")
+	
+	# WorldState is disabled - using ECS system instead
+	# No need to register with legacy WorldState
+	
+	# Debug: Check if node is visible
+	Logger.info("Created visual node for gang member: %s at %s (visible: %s)" % [
+		member_comp.member_name, 
+		member_node.position, 
+		member_node.visible
+	], "GameManager")
+
+func _find_optimal_spawn_position(base_location: Vector3, _member_id: String) -> Vector3:
+	# Get configuration for spawn behavior
+	var spawn_radius_min = config.get("spawn_radius_min", 2.0)
+	var spawn_radius_max = config.get("spawn_radius_max", 8.0)
+	var max_attempts = config.get("max_spawn_attempts", 20)
+	var min_distance_between_members = config.get("min_distance_between_members", 1.5)
+	
+	# Get existing member positions to avoid collisions
+	var existing_positions = _get_existing_member_positions()
+	
+	# Try to find a good spawn position
+	for attempt in range(max_attempts):
+		# Generate position using circular distribution
+		var angle = randf() * 2 * PI
+		var distance = randf_range(spawn_radius_min, spawn_radius_max)
+		var candidate_pos = base_location + Vector3(
+			cos(angle) * distance,
+			0,
+			sin(angle) * distance
+		)
+		
+		# Check for ground level using raycast
+		var ground_pos = _find_ground_level(candidate_pos)
+		if ground_pos != Vector3.ZERO:
+			candidate_pos = ground_pos
+		
+		# Check if position is clear of other members
+		if _is_position_clear(candidate_pos, existing_positions, min_distance_between_members):
+			Logger.info("Found optimal spawn position after %d attempts" % (attempt + 1), "GameManager")
+			return candidate_pos
+	
+	# Fallback: spawn near base with small random offset
+	var fallback_pos = base_location + Vector3(
+		randf_range(-2, 2),
+		0,
+		randf_range(-2, 2)
+	)
+	Logger.warning("Using fallback spawn position after %d failed attempts" % max_attempts, "GameManager")
+	return fallback_pos
+
+func _get_existing_member_positions() -> Array:
+	var positions = []
+	
+	# Check if we're in the scene tree
+	if not is_inside_tree():
+		return positions
+	
+	var gang_members = get_tree().get_nodes_in_group("gang_members")
+	for member in gang_members:
+		if member.has_method("get_global_position"):
+			positions.append(member.get_global_position())
+		elif member.has_method("get_position"):
+			positions.append(member.get_position())
+	return positions
+
+func _is_position_clear(candidate_pos: Vector3, existing_positions: Array, min_distance: float) -> bool:
+	for existing_pos in existing_positions:
+		if candidate_pos.distance_to(existing_pos) < min_distance:
+			return false
+	return true
+
+func _find_ground_level(candidate_pos: Vector3) -> Vector3:
+	# Check if we have access to the viewport and world
+	if not is_inside_tree():
+		return candidate_pos
+	
+	var viewport = get_viewport()
+	if not viewport:
+		return candidate_pos
+	
+	var world_3d = viewport.get_world_3d()
+	if not world_3d:
+		return candidate_pos
+	
+	# Use raycast to find ground level
+	var space_state = world_3d.direct_space_state
+	var query = PhysicsRayQueryParameters3D.create(
+		candidate_pos + Vector3(0, 10, 0),  # Start 10 units above
+		candidate_pos + Vector3(0, -10, 0)  # End 10 units below
+	)
+	query.collision_mask = 1  # Ground layer
+	
+	var result = space_state.intersect_ray(query)
+	if result:
+		return result.position
+	else:
+		# No ground found, return original position
+		return candidate_pos
 
 func get_game_stats() -> Dictionary:
 	return {

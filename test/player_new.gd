@@ -5,7 +5,7 @@ extends CharacterBody3D
 @export var targ: Vector3
 var member_id: String = ""
 
-var speed: float = 30.0
+var speed: float = 3.0  # Walking speed in m/s
 
 func _ready():
 	# Initialize speed from game configuration if available

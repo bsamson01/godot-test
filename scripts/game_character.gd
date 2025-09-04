@@ -4,7 +4,7 @@ extends CharacterBody3D
 @onready var childLabel = $childStatus
 @export var targ: Vector3
 
-var speed: float = 6.0
+var speed: float = 3.0  # Walking speed in m/s
 
 func _ready():
 	# Initialize speed from game configuration if available

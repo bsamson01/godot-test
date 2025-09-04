@@ -110,6 +110,9 @@ func change_state(new_state: MemberState) -> void:
 				"component": "GangMemberComponent"
 			}
 		)
+	
+	# Emit movement event for visual updates
+	_emit_movement_event(new_state)
 
 func is_available() -> bool:
 	return current_state == MemberState.IDLE and current_order == null
@@ -263,6 +266,11 @@ func _check_order_progress() -> void:
 		MemberState.TRAVELING:
 			if elapsed >= order_comp.travel_time:
 				# Start working and execute the order
+				Logger.debug("Order progress: Travel complete, starting work", "GangMember", {
+					"member": member_name,
+					"elapsed": elapsed,
+					"required": order_comp.travel_time
+				})
 				change_state(MemberState.WORKING)
 				order_progress = 0.0
 				# Execute the order when we start working
@@ -271,6 +279,11 @@ func _check_order_progress() -> void:
 		MemberState.WORKING:
 			if elapsed >= order_comp.work_time:
 				# Complete the work
+				Logger.debug("Order progress: Work complete, starting return", "GangMember", {
+					"member": member_name,
+					"elapsed": elapsed,
+					"required": order_comp.work_time
+				})
 				_complete_order()
 				change_state(MemberState.RETURNING)
 				order_progress = 0.0
@@ -278,6 +291,11 @@ func _check_order_progress() -> void:
 		MemberState.RETURNING:
 			if elapsed >= order_comp.return_time:
 				# Fully complete and return to idle
+				Logger.debug("Order progress: Return complete, order finished", "GangMember", {
+					"member": member_name,
+					"elapsed": elapsed,
+					"required": order_comp.return_time
+				})
 				current_order = null
 				order_progress = 0.0
 				change_state(MemberState.IDLE)
@@ -376,6 +394,82 @@ func get_stats() -> Dictionary:
 		"has_order": current_order != null
 	}
 
+func _emit_movement_event(state: MemberState) -> void:
+	if not Engine.has_singleton("EventBus"):
+		return
+	
+	var target_location = Vector3.ZERO
+	var movement_type = "idle"
+	
+	# Determine target location based on state and order
+	if current_order:
+		var order_comp = current_order.get_component("OrderComponent")
+		if order_comp:
+			match order_comp.order_type:
+				OrderComponent.OrderType.BUY_SUPPLIES:
+					# Move to shop location
+					target_location = _get_shop_location()
+					movement_type = "travel_to_shop"
+				OrderComponent.OrderType.RECRUIT:
+					# Move to recruitment area
+					target_location = _get_recruitment_location()
+					movement_type = "travel_to_recruit"
+				OrderComponent.OrderType.PATROL:
+					# Move to patrol area
+					target_location = _get_patrol_location()
+					movement_type = "travel_to_patrol"
+				_:
+					# Default to base location
+					target_location = _get_base_location()
+					movement_type = "travel_to_base"
+	else:
+		# Return to base when idle
+		target_location = _get_base_location()
+		movement_type = "return_to_base"
+	
+	# Emit movement event
+	var event_bus = Engine.get_singleton("EventBus")
+	if event_bus:
+		event_bus.emit_event(
+			EventBus.EventType.ENTITY_MOVEMENT,
+			{
+				"entity_id": entity.id,
+				"member_name": member_name,
+				"target_location": target_location,
+				"movement_type": movement_type,
+				"state": MemberState.keys()[state]
+			}
+		)
+
+func _get_base_location() -> Vector3:
+	# Get faction base location
+	var faction_entity = _get_faction_entity()
+	if faction_entity:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp:
+			return faction_comp.base_location
+	return Vector3.ZERO
+
+func _get_shop_location() -> Vector3:
+	# Find nearest shop
+	var shops = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("shop")
+	if shops.size() > 0:
+		return shops[0].global_position
+	return Vector3(0, 0, 25)  # Default shop location (25m away)
+
+func _get_recruitment_location() -> Vector3:
+	# Random location for recruitment (within reasonable distance)
+	return Vector3(randf_range(-30, 30), 0, randf_range(-30, 30))
+
+func _get_patrol_location() -> Vector3:
+	# Random patrol location (within territory bounds)
+	return Vector3(randf_range(-25, 25), 0, randf_range(-25, 25))
+
+func _get_faction_entity() -> Entity:
+	if Engine.has_singleton("EntityManager"):
+		return Engine.get_singleton("EntityManager").get_entity(faction_id)
+	return null
+
 # Event handlers
 func _on_order_completed(event: EventBus.Event) -> void:
 	if event.data.get("member_id") == entity.id:
@@ -393,13 +487,30 @@ func _on_order_cancelled(event: EventBus.Event) -> void:
 		pass
 
 # Static factory method for creating random members
-static func create_random() -> Dictionary:
-	var names = ["Ghost", "Snake", "Viper", "Blaze", "Razor", "Shadow", "Steel", "Flame"]
+static func create_random(existing_names: Array = []) -> Dictionary:
+	var names = ["Ghost", "Snake", "Viper", "Blaze", "Razor", "Shadow", "Steel", "Flame", 
+				"Storm", "Ace", "Blade", "Fang", "Claw", "Edge", "Wolf", "Hawk", "Fox",
+				"Lynx", "Bear", "Tiger", "Lion", "Eagle", "Falcon", "Raven", "Crow",
+				"Phoenix", "Dragon", "Viper", "Cobra", "Python", "Scorpion", "Spider"]
 	var roles = AVAILABLE_ROLES
 	var personalities = AVAILABLE_PERSONALITIES
 	
+	# Filter out existing names to prevent duplicates
+	var available_names = []
+	for name in names:
+		if not name in existing_names:
+			available_names.append(name)
+	
+	# If all names are taken, add numbers to make them unique
+	var selected_name = ""
+	if available_names.size() > 0:
+		selected_name = available_names[randi() % available_names.size()]
+	else:
+		# Fallback: use a random name with a number
+		selected_name = names[randi() % names.size()] + str(randi() % 1000)
+	
 	return {
-		"name": names[randi() % names.size()],
+		"name": selected_name,
 		"role": roles[randi() % roles.size()],
 		"loyalty": randf_range(70, 100),
 		"personality": personalities[randi() % personalities.size()]

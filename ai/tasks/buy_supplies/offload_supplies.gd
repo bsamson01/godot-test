@@ -22,19 +22,22 @@ func _tick(delta: float) -> Status:
 		var member = agent.get_member() if agent.has_method("get_member") else null
 		
 		if member and member.faction:
-			# Add supplies to faction inventory
-			var faction = WorldState.get_faction(member.faction_id)
-			if faction:
-				# Assuming faction has a supplies property
-				faction.supplies = faction.supplies + supplies_bought if faction.has("supplies") else supplies_bought
-				
-				# Report success
-				blackboard.set_var("supplies_delivered", true)
-				
-				if agent.has_method("set_status"):
-					agent.set_status("Supplies delivered!")
-				
-				return SUCCESS
+			# Use ECS system to add supplies to faction
+			var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
+			if entity_manager:
+				var faction_entity = entity_manager.get_entity(member.faction_id)
+				if faction_entity:
+					var faction_comp = faction_entity.get_component("FactionComponent")
+					if faction_comp:
+						faction_comp.add_supplies(supplies_bought)
+						
+						# Report success
+						blackboard.set_var("supplies_delivered", true)
+						
+						if agent.has_method("set_status"):
+							agent.set_status("Supplies delivered!")
+						
+						return SUCCESS
 		
 		return FAILURE
 		

@@ -64,9 +64,9 @@ func _calculate_requirements() -> void:
 	match order_type:
 		OrderType.BUY_SUPPLIES:
 			required_funds = parameters.get("amount", 500.0)
-			travel_time = 5.0
-			work_time = 2.0
-			return_time = 5.0
+			travel_time = 1.0
+			work_time = 0.5
+			return_time = 1.0
 			priority = 80
 			
 		OrderType.DEFEND:
@@ -95,15 +95,15 @@ func _calculate_requirements() -> void:
 			
 		OrderType.RECRUIT:
 			required_funds = 1500.0
-			travel_time = 3.0
-			work_time = 4.0
-			return_time = 3.0
+			travel_time = 0.5
+			work_time = 1.0
+			return_time = 0.5
 			priority = 40
 			
 		OrderType.PATROL:
-			travel_time = 2.0
-			work_time = 5.0
-			return_time = 2.0
+			travel_time = 0.3
+			work_time = 1.0
+			return_time = 0.3
 			priority = 30
 			
 		OrderType.NEGOTIATE:

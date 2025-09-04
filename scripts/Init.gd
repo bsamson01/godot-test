@@ -16,7 +16,7 @@ func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 		print("ERROR: GameManager not found! ECS system required.")
 		return
 	
-	var entity_manager = game_manager.entity_manager
+	var _entity_manager = game_manager.entity_manager
 	
 	# Get all available bases and businesses from the scene
 	var available_bases = _get_unassigned_bases()
@@ -30,7 +30,7 @@ func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	
 	print("Init completed - factions created using ECS system")
 
-func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
+func _create_faction_ecs(faction_index: int, available_bases: Array, _available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
 	if not game_manager:
 		game_manager = get_node("../GameManager") as GameManager
 	var entity_manager = game_manager.entity_manager
@@ -80,7 +80,7 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 		faction_comp.add_territory(territory)
 		
 		# Create businesses in territory
-		for j in range(config.businesses_per_faction):
+		for j in range(config.businesses_per_territory):
 			var business = _create_business_ecs(territory.id, faction_entity.id, entity_manager)
 			faction_comp.add_business(business)
 	
@@ -90,8 +90,11 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 func _create_gang_member_ecs(faction_id: String, role: String, entity_manager: EntityManager) -> Entity:
 	var member_entity = entity_manager.create_entity("gang_member")
 	
+	# Get existing member names in this faction to avoid duplicates
+	var existing_names = _get_faction_member_names_ecs(faction_id, entity_manager)
+	
 	# Generate random member data
-	var member_data = GangMemberComponent.create_random()
+	var member_data = GangMemberComponent.create_random(existing_names)
 	
 	# Add gang member component
 	var member_comp = GangMemberComponent.new()
@@ -112,6 +115,18 @@ func _create_gang_member_ecs(faction_id: String, role: String, entity_manager: E
 		member_entity.add_component(ai_comp)
 	
 	return member_entity
+
+func _get_faction_member_names_ecs(faction_id: String, entity_manager: EntityManager) -> Array:
+	var existing_names = []
+	var faction_entity = entity_manager.get_entity(faction_id)
+	if faction_entity:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp:
+			for member_entity in faction_comp.get_members():
+				var member_comp = member_entity.get_component("GangMemberComponent")
+				if member_comp:
+					existing_names.append(member_comp.member_name)
+	return existing_names
 
 func _create_territory_ecs(faction_id: String, territory_name: String, entity_manager: EntityManager) -> Entity:
 	var territory_entity = entity_manager.create_entity("territory")
@@ -148,8 +163,8 @@ func _get_unassigned_bases() -> Array:
 	var unassigned_bases = []
 	var base_nodes = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("base")
 	for base_node in base_nodes:
-		var owner = base_node.get_meta("owner", "")
-		if owner == "":
+		var base_owner = base_node.get_meta("owner", "")
+		if base_owner == "":
 			unassigned_bases.append(base_node)
 	return unassigned_bases
 
@@ -157,8 +172,8 @@ func _get_unassigned_businesses() -> Array:
 	var unassigned_businesses = []
 	var business_nodes = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("business")
 	for business_node in business_nodes:
-		var owner = business_node.get_meta("owner", "")
-		if owner == "":
+		var business_owner = business_node.get_meta("owner", "")
+		if business_owner == "":
 			unassigned_businesses.append(business_node)
 	return unassigned_businesses
 
@@ -173,8 +188,8 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 	var member_scene = preload("res://test/player.tscn")
 	var member_node = member_scene.instantiate()
 	
-	# Position near the base with some random offset
-	var spawn_pos = base_location + Vector3(randf_range(-3, 3), 0, randf_range(-3, 3))
+	# Use improved spawn positioning
+	var spawn_pos = _find_optimal_spawn_position(base_location, member_entity.id)
 	member_node.position = spawn_pos
 	
 	# Add to scene - use get_parent() since Init script is a child of the main scene
@@ -204,16 +219,103 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 			if material:
 				material.albedo_color = faction_color
 	
-	# Register node with WorldState
-	if Engine.has_singleton("WorldState"):
-		var world_state = Engine.get_singleton("WorldState")
-		world_state.register_gang_member_node(member_node)
+	# WorldState is disabled - using ECS system instead
+	# No need to register with legacy WorldState
 	
-	# Initialize AI with behavior tree
-	if member_node.has_node("BTPlayer"):
-		var bt_player = member_node.get_node("BTPlayer")
-		var behavior_tree = load("res://ai/tres/test.tres")
-		bt_player.behavior_tree = behavior_tree
-		bt_player.blackboard.set_var("member_id", member_entity.id)
+	# Disable legacy behavior tree system - using ECS AI components instead
+	# if member_node.has_node("BTPlayer"):
+	#	var bt_player = member_node.get_node("BTPlayer")
+	#	var behavior_tree = load("res://ai/tres/test.tres")
+	#	bt_player.behavior_tree = behavior_tree
+	#	bt_player.blackboard.set_var("member_id", member_entity.id)
 	
 	print("Created visual node for gang member: %s" % member_comp.member_name)
+
+func _find_optimal_spawn_position(base_location: Vector3, _member_id: String) -> Vector3:
+	# Configuration for spawn behavior (same as GameManager)
+	var spawn_radius_min = 5.0
+	var spawn_radius_max = 15.0
+	var max_attempts = 20
+	var min_distance_between_members = 2.0
+	
+	# Get existing member positions to avoid collisions
+	var existing_positions = _get_existing_member_positions()
+	
+	# Try to find a good spawn position
+	for attempt in range(max_attempts):
+		# Generate position using circular distribution
+		var angle = randf() * 2 * PI
+		var distance = randf_range(spawn_radius_min, spawn_radius_max)
+		var candidate_pos = base_location + Vector3(
+			cos(angle) * distance,
+			0,
+			sin(angle) * distance
+		)
+		
+		# Check for ground level using raycast
+		var ground_pos = _find_ground_level(candidate_pos)
+		if ground_pos != Vector3.ZERO:
+			candidate_pos = ground_pos
+		
+		# Check if position is clear of other members
+		if _is_position_clear(candidate_pos, existing_positions, min_distance_between_members):
+			print("Found optimal spawn position after %d attempts" % (attempt + 1))
+			return candidate_pos
+	
+	# Fallback: spawn near base with small random offset
+	var fallback_pos = base_location + Vector3(
+		randf_range(-2, 2),
+		0,
+		randf_range(-2, 2)
+	)
+	print("Using fallback spawn position after %d failed attempts" % max_attempts)
+	return fallback_pos
+
+func _get_existing_member_positions() -> Array:
+	var positions = []
+	
+	# Check if we're in the scene tree
+	if not is_inside_tree():
+		return positions
+	
+	var gang_members = get_tree().get_nodes_in_group("gang_members")
+	for member in gang_members:
+		if member.has_method("get_global_position"):
+			positions.append(member.get_global_position())
+		elif member.has_method("get_position"):
+			positions.append(member.get_position())
+	return positions
+
+func _is_position_clear(candidate_pos: Vector3, existing_positions: Array, min_distance: float) -> bool:
+	for existing_pos in existing_positions:
+		if candidate_pos.distance_to(existing_pos) < min_distance:
+			return false
+	return true
+
+func _find_ground_level(candidate_pos: Vector3) -> Vector3:
+	# Check if we have access to the viewport and world
+	if not is_inside_tree():
+		return candidate_pos
+	
+	var viewport = get_viewport()
+	if not viewport:
+		return candidate_pos
+	
+	var world_3d = viewport.get_world_3d()
+	if not world_3d:
+		return candidate_pos
+	
+	# Use raycast to find ground level
+	var space_state = world_3d.direct_space_state
+	var query = PhysicsRayQueryParameters3D.create(
+		candidate_pos + Vector3(0, 10, 0),  # Start 10 units above
+		candidate_pos + Vector3(0, -10, 0)  # End 10 units below
+	)
+	query.collision_mask = 1  # Ground layer
+	
+	var result = space_state.intersect_ray(query)
+	if result:
+		return result.position
+	else:
+		# No ground found, return original position
+		return candidate_pos

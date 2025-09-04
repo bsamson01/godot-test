@@ -30,9 +30,10 @@ class_name GameConfig
 
 # Order configuration
 @export_group("Order Settings")
-@export var order_travel_time_base: float = 0.25  # 20x faster
-@export var order_work_time_base: float = 0.5  # 20x faster
-@export var order_return_time_base: float = 0.25  # 20x faster
+@export var order_travel_time_base: float = 2.0  # Base travel time in seconds
+@export var order_work_time_base: float = 3.0  # Base work time in seconds
+@export var order_return_time_base: float = 2.0  # Base return time in seconds
+@export var order_time_multiplier: float = 1.0  # Global order time multiplier
 @export var supply_order_priority: int = 80
 @export var defend_order_priority: int = 90
 @export var spy_order_priority: int = 60
@@ -46,11 +47,27 @@ class_name GameConfig
 @export var loyalty_loss_on_injury: float = 10.0
 @export var loyalty_gain_on_success: float = 3.0
 
+# Scale configuration
+@export_group("Scale Settings")
+@export var world_scale: float = 1.0  # Base scale for all world elements
+@export var character_scale: float = 1.0  # Character mesh scale (1.0 = normal human size)
+@export var character_height: float = 1.8  # Character height in meters
+@export var character_radius: float = 0.4  # Character collision radius in meters
+
 # Movement configuration
 @export_group("Movement Settings")
-@export var character_movement_speed: float = 6.0
+@export var character_movement_speed: float = 3.0  # Base movement speed in m/s (walking speed)
+@export var character_run_speed: float = 6.0  # Running speed in m/s
 @export var speed_multiplier: float = 1.0  # Global speed multiplier
 @export var fast_travel_enabled: bool = true
+
+# Distance configuration
+@export_group("Distance Settings")
+@export var spawn_radius_min: float = 5.0  # Minimum spawn distance from base (meters)
+@export var spawn_radius_max: float = 15.0  # Maximum spawn distance from base (meters)
+@export var min_distance_between_members: float = 2.0  # Minimum spacing between members (meters)
+@export var base_radius: float = 10.0  # Base influence radius (meters)
+@export var territory_radius: float = 50.0  # Territory radius (meters)
 
 # Performance configuration
 @export_group("Performance Settings")
