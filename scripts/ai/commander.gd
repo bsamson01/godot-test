@@ -170,6 +170,6 @@ func get_faction_entity() -> Entity:
 	var faction_entities = entity_manager.get_entities_with_component("FactionComponent")
 	for faction_entity in faction_entities:
 		var faction_comp = faction_entity.get_component("FactionComponent")
-		if faction_comp and faction_comp.get_members().has(self.get_entity().id):
+		if faction_comp and faction_comp.get_members().has(self.member_id):
 			return faction_entity
 	return null
