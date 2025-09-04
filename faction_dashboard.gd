@@ -22,10 +22,9 @@ func update_display():
 	for child in faction_list.get_children():
 		child.queue_free()
 	
-	# Get factions from both systems for compatibility
+	# Get factions from ECS system only
 	var all_factions = []
 	
-	# Try new ECS system first
 	if Engine.has_singleton("EntityManager"):
 		var entity_manager = Engine.get_singleton("EntityManager")
 		var faction_entities = entity_manager.get_entities_with_component("FactionComponent")
@@ -39,18 +38,6 @@ func update_display():
 					"members": faction_comp.get_members().size(),
 					"color": faction_comp.color
 				})
-	
-	# Fallback to old system if no ECS factions found
-	if all_factions.is_empty():
-		all_factions = WorldState.get_all_factions()
-		for faction in all_factions:
-			all_factions.append({
-				"name": faction.name,
-				"funds": faction.funds,
-				"supplies": faction.supplies,
-				"members": faction.get_members().size(),
-				"color": faction.color
-			})
 	
 	# Create UI elements for each faction
 	for faction_data in all_factions:

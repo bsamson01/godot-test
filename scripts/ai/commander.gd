@@ -12,32 +12,45 @@ func process_tick(current_tick: int):
 	assign_orders_to_members()
 
 func consider_new_orders():
-	var faction = get_faction()
-	if not faction:
+	var faction_entity = get_faction_entity()
+	if not faction_entity:
+		return
+	
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp:
 		return
 
-	var members = faction.get_members()
-	var idle_members = members.filter(func(m): return m.is_idle() && m.role != GangMember.ROLE_COMMANDER)
-	var territories = faction.get_territories()
+	var members = faction_comp.get_members()
+	var idle_members = []
+	
+	# Get idle members using ECS
+	for member_entity_id in members:
+		var member_entity = Engine.get_singleton("EntityManager").get_entity(member_entity_id)
+		if member_entity:
+			var member_comp = member_entity.get_component("GangMemberComponent")
+			if member_comp and member_comp.is_idle() and member_comp.role != GangMemberComponent.ROLE_COMMANDER:
+				idle_members.append(member_entity)
+	
+	var territories = faction_comp.get_territories()
 
 	# BUY_SUPPLIES: funds are high, but supplies are low
-	if faction.funds > 500 and faction.supplies < 500:
+	if faction_comp.funds > 500 and faction_comp.supplies < 500:
 		maybe_queue_order(Order.TYPE_BUY_SUPPLIES)
 
 	# SPY: funds are good and no negotiation in progress
-	if faction.funds > 600 and not faction.negotiations_active:
+	if faction_comp.funds > 600 and not faction_comp.negotiations_active:
 		maybe_queue_order(Order.TYPE_SPY)
 
 	# RECRUIT: if we're under-strength
-	if faction.funds > 2000 and members.size() < 5:
+	if faction_comp.funds > 2000 and members.size() < 5:
 		maybe_queue_order(Order.TYPE_RECRUIT_MEMBERS)
 
 	# DEFEND: low supplies or few members = risk
-	if faction.supplies < 300 or members.size() <= 2:
+	if faction_comp.supplies < 300 or members.size() <= 2:
 		maybe_queue_order(Order.TYPE_DEFEND_TERRITORY)
 
 	# ATTACK: if faction is strong and has surplus funds
-	if faction.funds > 1000 and members.size() >= 5:
+	if faction_comp.funds > 1000 and members.size() >= 5:
 		maybe_queue_order(Order.TYPE_ATTACK_ENEMY)
 
 	# PATROL: idle members + territories => patrol them
@@ -46,8 +59,15 @@ func consider_new_orders():
 
 
 func maybe_queue_order(order_type: int, target_id: String = "") -> bool:
-	var faction = get_faction()
-	var members = faction.get_members()
+	var faction_entity = get_faction_entity()
+	if not faction_entity:
+		return false
+		
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp:
+		return false
+		
+	var members = faction_comp.get_members()
 
 	# Prevent duplicate orders of the same type (with same target_id)
 	for order in order_queue:
@@ -56,9 +76,12 @@ func maybe_queue_order(order_type: int, target_id: String = "") -> bool:
 	
 	# For BUY_SUPPLIES, only one allowed in the queue at any time
 	if order_type == Order.TYPE_BUY_SUPPLIES:
-		for member in members:
-			if member.current_order && member.current_order.type == Order.TYPE_BUY_SUPPLIES:
-				return false
+		for member_entity_id in members:
+			var member_entity = Engine.get_singleton("EntityManager").get_entity(member_entity_id)
+			if member_entity:
+				var member_comp = member_entity.get_component("GangMemberComponent")
+				if member_comp and member_comp.current_order and member_comp.current_order.type == Order.TYPE_BUY_SUPPLIES:
+					return false
 
 		for order in order_queue:
 			if order.type == Order.TYPE_BUY_SUPPLIES:
@@ -83,11 +106,24 @@ func reevaluate_order_queue():
 	order_queue = valid_orders
 
 func assign_orders_to_members():
-	var faction = get_faction()
-	if not faction:
+	var faction_entity = get_faction_entity()
+	if not faction_entity:
 		return
 		
-	var available_members = faction.get_members().filter(func(m): return m.is_idle() && m.role != GangMember.ROLE_COMMANDER )
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp:
+		return
+		
+	var members = faction_comp.get_members()
+	var available_members = []
+	
+	# Get available members using ECS
+	for member_entity_id in members:
+		var member_entity = Engine.get_singleton("EntityManager").get_entity(member_entity_id)
+		if member_entity:
+			var member_comp = member_entity.get_component("GangMemberComponent")
+			if member_comp and member_comp.is_idle() and member_comp.role != GangMemberComponent.ROLE_COMMANDER:
+				available_members.append(member_entity)
 
 	var assigned_supply_order = false
 
@@ -98,8 +134,9 @@ func assign_orders_to_members():
 		if order.type == Order.TYPE_BUY_SUPPLIES and assigned_supply_order:
 			continue
 
-		var member = available_members.pop_front()
-		if member.assign_order(order):
+		var member_entity = available_members.pop_front()
+		var member_comp = member_entity.get_component("GangMemberComponent")
+		if member_comp and member_comp.assign_order(order):
 			order_history.append(order)
 			order_queue.erase(order)
 			if order.type == Order.TYPE_BUY_SUPPLIES:
@@ -107,14 +144,32 @@ func assign_orders_to_members():
 
 
 func _is_order_still_valid(order: Order) -> bool:
-	var faction = get_faction()
-	if not faction:
+	var faction_entity = get_faction_entity()
+	if not faction_entity:
+		return false
+		
+	var faction_comp = faction_entity.get_component("FactionComponent")
+	if not faction_comp:
 		return false
 		
 	match order.type:
 		Order.TYPE_BUY_SUPPLIES:
-			return faction.funds > 500
+			return faction_comp.funds > 500
 		Order.TYPE_SPY:
-			return not faction.negotiations_active
+			return not faction_comp.negotiations_active
 		_:
 			return true
+
+func get_faction_entity() -> Entity:
+	# Get faction entity using ECS
+	var entity_manager = Engine.get_singleton("EntityManager")
+	if not entity_manager:
+		return null
+		
+	# Find faction entity by checking all faction components
+	var faction_entities = entity_manager.get_entities_with_component("FactionComponent")
+	for faction_entity in faction_entities:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp and faction_comp.get_members().has(self.get_entity().id):
+			return faction_entity
+	return null

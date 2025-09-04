@@ -9,9 +9,13 @@ func init_all(config: Dictionary = {}):
 	}
 	config.merge(default_config)
 	
-	# Clear existing data from old system for compatibility
-	WorldState.factions.clear()
-	WorldState.gang_members.clear()
+	# Get the GameManager to create entities
+	var game_manager = get_node("../GameManager") as GameManager
+	if not game_manager or not game_manager.entity_manager:
+		print("ERROR: GameManager not found! ECS system required.")
+		return
+	
+	var entity_manager = game_manager.entity_manager
 	
 	# Get all available bases and businesses from the scene
 	var available_bases = _get_unassigned_bases()
@@ -19,20 +23,14 @@ func init_all(config: Dictionary = {}):
 	
 	print("Found %d unassigned bases and %d unassigned businesses" % [available_bases.size(), available_businesses.size()])
 	
-	# Create factions using the new ECS system
+	# Create factions using the ECS system
 	for i in range(config.faction_count):
 		_create_faction_ecs(i, available_bases, available_businesses, config)
 	
 	print("Init completed - factions created using ECS system")
 
 func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary):
-	# Get the GameManager to create entities
 	var game_manager = get_node("../GameManager") as GameManager
-	if not game_manager or not game_manager.entity_manager:
-		print("GameManager not found, falling back to old system")
-		_create_faction_legacy(faction_index, available_bases, available_businesses, config)
-		return
-	
 	var entity_manager = game_manager.entity_manager
 	
 	# Create faction entity
@@ -80,56 +78,6 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 	
 	print("Created faction %s with %d members" % [faction_comp.faction_name, faction_comp.get_members().size()])
 
-func _create_faction_legacy(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary):
-	# Fallback to old system if ECS not available
-	var faction = _create_faction()
-	WorldState.register_faction(faction)
-	
-	# Assign a base to the faction if available
-	if available_bases.size() > 0:
-		var base_node = available_bases.pop_front() as Node3D
-		base_node.set_meta("owner", faction.id)
-		var baseText = base_node.get_node('Label3D') as Label3D
-		if baseText:
-			baseText.text = faction.name
-			baseText.modulate = faction.color
-		faction.base_location = base_node.global_position
-		print("Assigned base at %s to faction %s" % [base_node.global_position, faction.name])
-	else:
-		print("No available bases for faction %s" % faction.name)
-	
-	# Create commander
-	var commander = GangMember.create_random(faction.id, GangMember.ROLE_COMMANDER)
-	WorldState.register_gang_member(commander)
-	faction.add_member(commander)
-	
-	var commander_node = GangMemberNode.new(commander)
-	WorldState.register_gang_member_node(commander_node)
-	add_child(commander_node)
-	
-	# Create regular members
-	for j in range(config.members_per_faction - 1):
-		var member = GangMember.create_random(faction.id)
-		WorldState.register_gang_member(member)
-		faction.add_member(member)
-		
-		# Create node for member
-		var member_node = GangMemberNode.new(member)
-		WorldState.register_gang_member_node(member_node)
-		add_child(member_node)
-	
-	# Assign businesses to the faction if available
-	for b in range(config.businesses_per_faction):
-		if available_businesses.size() > 0:
-			var business_node = available_businesses.pop_front()
-			var business = Business.random_business("", faction.id)
-			
-			WorldState.register_business(business)
-			business_node.set_meta("owner", business.id)
-			faction.add_business(business)
-			print("Assigned business %s at %s to faction %s" % [business.name, business_node.global_position, faction.name])
-		else:
-			print("No available businesses for faction %s" % faction.name)
 
 func _create_gang_member_ecs(faction_id: String, role: String, entity_manager: EntityManager) -> Entity:
 	var member_entity = entity_manager.create_entity("gang_member")
@@ -197,10 +145,3 @@ func _get_unassigned_businesses() -> Array:
 			unassigned_businesses.append(business_node)
 	return unassigned_businesses
 
-func _create_faction() -> Faction:
-	var faction = Faction.new()
-	var names = ["Red Vipers", "Night Rats", "Iron Fangs"]
-	faction.name = names[randi() % names.size()]
-	faction.color = Color(randf(), randf(), randf())
-	faction.base_location = Vector3(randf_range(-100, 100), 0, randf_range(-100, 100))
-	return faction
