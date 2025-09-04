@@ -34,7 +34,7 @@ func _ready():
 		"faction_count": 1,  # Match GameManager config
 		"members_per_faction": 2,  # Match GameManager config
 		"businesses_per_faction": 1
-	})
+	}, game_manager)
 	add_child(init_script)
 	
 	# Connect to game events for UI updates

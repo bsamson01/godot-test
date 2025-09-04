@@ -1,6 +1,6 @@
 extends Node
 
-func init_all(config: Dictionary = {}):
+func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	var default_config = {
 		"faction_count": 1,
 		"members_per_faction": 2,
@@ -10,7 +10,8 @@ func init_all(config: Dictionary = {}):
 	config.merge(default_config)
 	
 	# Get the GameManager to create entities
-	var game_manager = get_node("../GameManager") as GameManager
+	if not game_manager:
+		game_manager = get_node("../GameManager") as GameManager
 	if not game_manager or not game_manager.entity_manager:
 		print("ERROR: GameManager not found! ECS system required.")
 		return
@@ -25,12 +26,13 @@ func init_all(config: Dictionary = {}):
 	
 	# Create factions using the ECS system
 	for i in range(config.faction_count):
-		_create_faction_ecs(i, available_bases, available_businesses, config)
+		_create_faction_ecs(i, available_bases, available_businesses, config, game_manager)
 	
 	print("Init completed - factions created using ECS system")
 
-func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary):
-	var game_manager = get_node("../GameManager") as GameManager
+func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
+	if not game_manager:
+		game_manager = get_node("../GameManager") as GameManager
 	var entity_manager = game_manager.entity_manager
 	
 	# Create faction entity
