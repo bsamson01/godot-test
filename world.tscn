@@ -18,8 +18,8 @@ sky = SubResource("Sky_gbfbk")
 tonemap_mode = 2
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_gv5m4"]
-vertices = PackedVector3Array(-7.15905, 0.973723, 6.38215, -5.65905, 0.973723, 6.38215, -5.65905, 0.973723, 3.63215, -7.15905, 0.973723, -6.36785, -2.40905, 0.973723, 3.63215, 1.34095, 0.973723, 3.38215, 1.34095, 0.973723, 1.13215, 2.84095, 0.973723, -6.36785, 3.09095, 0.973723, 0.882145, 3.84095, 0.973723, 0.882145, 7.09095, 0.973723, 0.632145, 7.09095, 0.973723, -6.36785, 4.34095, 0.973723, 1.13215, -1.90905, 0.973723, 3.88215, 1.59095, 0.973723, 4.13215, -2.15905, 0.973723, 6.38215, 7.09095, 0.973723, 6.38215, 4.09095, 0.973723, 4.13215, 2.34095, 2.72372, 1.88215, 2.34095, 2.72372, 3.13215, 3.34095, 2.72372, 3.13215, 3.34095, 2.72372, 1.88215, -4.90905, 2.72372, 4.63215, -4.90905, 2.72372, 5.38215, -2.90905, 2.72372, 5.38215, -2.90905, 2.72372, 4.63215)
-polygons = [PackedInt32Array(1, 0, 2), PackedInt32Array(2, 0, 3), PackedInt32Array(6, 5, 4), PackedInt32Array(4, 2, 6), PackedInt32Array(6, 2, 7), PackedInt32Array(7, 2, 3), PackedInt32Array(7, 8, 6), PackedInt32Array(9, 8, 10), PackedInt32Array(10, 8, 11), PackedInt32Array(11, 8, 7), PackedInt32Array(12, 9, 10), PackedInt32Array(13, 4, 5), PackedInt32Array(5, 14, 13), PackedInt32Array(13, 14, 15), PackedInt32Array(17, 16, 14), PackedInt32Array(14, 16, 15), PackedInt32Array(12, 10, 17), PackedInt32Array(17, 10, 16), PackedInt32Array(21, 20, 18), PackedInt32Array(18, 20, 19), PackedInt32Array(25, 24, 22), PackedInt32Array(22, 24, 23)]
+vertices = PackedVector3Array(-2.65905, 0.973723, 4.88215, -3.90905, 0.973723, 5.13215, -3.90905, 0.973723, 6.38215, -7.15905, 0.973723, 3.38215, -5.15905, 0.973723, 3.38215, -4.90905, 0.973723, 2.88215, 2.84095, 0.973723, 6.38215, 2.84095, 0.973723, 3.88215, 1.59095, 0.973723, 3.63215, 3.84095, 0.973723, 1.13215, 4.09095, 0.973723, 2.38215, 7.09095, 0.973723, 2.38215, 7.09095, 0.973723, -6.36785, -2.65905, 0.973723, 3.13215, 1.59095, 0.973723, 1.38215, -7.15905, 0.973723, -6.36785, 2.59095, 2.47372, 2.13215, 2.59095, 2.72372, 2.88215, 3.09095, 2.72372, 2.88215, 3.09095, 2.47372, 2.13215, 4.09095, 0.973723, 3.63215, 7.09095, 0.973723, 6.38215, -5.15905, 0.973723, 4.88215, -7.15905, 0.973723, 6.38215)
+polygons = [PackedInt32Array(2, 1, 0), PackedInt32Array(5, 4, 3), PackedInt32Array(7, 6, 8), PackedInt32Array(8, 6, 0), PackedInt32Array(0, 6, 2), PackedInt32Array(10, 9, 11), PackedInt32Array(11, 9, 12), PackedInt32Array(13, 5, 14), PackedInt32Array(14, 12, 9), PackedInt32Array(0, 13, 8), PackedInt32Array(8, 13, 14), PackedInt32Array(5, 3, 14), PackedInt32Array(14, 3, 15), PackedInt32Array(14, 15, 12), PackedInt32Array(19, 18, 16), PackedInt32Array(16, 18, 17), PackedInt32Array(6, 7, 20), PackedInt32Array(20, 10, 11), PackedInt32Array(11, 21, 20), PackedInt32Array(20, 21, 6), PackedInt32Array(1, 2, 22), PackedInt32Array(22, 2, 23), PackedInt32Array(4, 22, 3), PackedInt32Array(3, 22, 23)]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_f3sb7"]
 size = Vector2(10, 10)
@@ -55,14 +55,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0231558, 0)
 shape = SubResource("ConcavePolygonShape3D_f3sb7")
 
 [node name="Shop" parent="NavigationRegion3D" instance=ExtResource("2_aqk2v")]
-transform = Transform3D(-1.11027e-08, 0, 0.240324, 0, 0.0876547, 0, -0.233877, 0, -9.6726e-09, -3.94149, 1.35856, 5.05529)
+transform = Transform3D(-7.36223e-09, 0, 0.108306, 0, 0.0620869, 0, -0.155084, 0, -4.35913e-09, -3.94149, 1.10256, 3.99276)
 skeleton = NodePath("../../..")
 
 [node name="Base" parent="NavigationRegion3D" instance=ExtResource("2_1deqs")]
 transform = Transform3D(-0.425, 0, 1.08533, 0, 2, 0, -1.08203, 0, -0.426296, -2.53152, 0.494473, -2.35921)
 
 [node name="Business" parent="NavigationRegion3D" instance=ExtResource("3_1scyw")]
-transform = Transform3D(0.332823, 0, 0, 0, 0.130678, 0, 0, 0, 0.120066, 2.8458, 1.34862, 2.59179)
+transform = Transform3D(0.219092, 0, 0, 0, 0.113847, 0, 0, 0, 0.0938164, 2.8458, 1.20898, 2.59179)
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(0.00343087, 0.00823435, -0.00451935, 6.05545e-05, 0.0047919, 0.0087769, 0.00939284, -0.00303861, 0.00159418, -5.55325, 6.18277, 0)

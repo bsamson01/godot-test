@@ -5,7 +5,7 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_kwi5i"]
 
 [node name="Business" type="MeshInstance3D" groups=["business"]]
-transform = Transform3D(-8.74228e-09, 0, -0.2, 0, 0.2, 0, 0.2, 0, -8.74228e-09, 0, 1.1891, 0)
+transform = Transform3D(-3.63537e-09, 0, -0.0394402, 0, 0.2, 0, 0.0831676, 0, -1.72399e-09, 0, 1.1891, 0)
 mesh = ExtResource("1_v8by0")
 skeleton = NodePath("../..")
 metadata/owner = ""

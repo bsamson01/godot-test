@@ -30,9 +30,9 @@ class_name GameConfig
 
 # Order configuration
 @export_group("Order Settings")
-@export var order_travel_time_base: float = 0.5  # 10x faster
-@export var order_work_time_base: float = 1.0  # 10x faster
-@export var order_return_time_base: float = 0.5  # 10x faster
+@export var order_travel_time_base: float = 0.25  # 20x faster
+@export var order_work_time_base: float = 0.5  # 20x faster
+@export var order_return_time_base: float = 0.25  # 20x faster
 @export var supply_order_priority: int = 80
 @export var defend_order_priority: int = 90
 @export var spy_order_priority: int = 60
@@ -45,6 +45,12 @@ class_name GameConfig
 @export var sabotage_success_base_chance: float = 0.65
 @export var loyalty_loss_on_injury: float = 10.0
 @export var loyalty_gain_on_success: float = 3.0
+
+# Movement configuration
+@export_group("Movement Settings")
+@export var character_movement_speed: float = 6.0
+@export var speed_multiplier: float = 1.0  # Global speed multiplier
+@export var fast_travel_enabled: bool = true
 
 # Performance configuration
 @export_group("Performance Settings")
