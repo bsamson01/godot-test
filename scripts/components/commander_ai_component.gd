@@ -67,9 +67,9 @@ func _update_cached_state() -> void:
 	var available_members = 0
 	var busy_members = 0
 	for member_entity in faction_comp.get_members():
-		var member_comp = member_entity.get_component("GangMemberComponent")
-		if member_comp:
-			if member_comp.is_available():
+		var member_comp_check = member_entity.get_component("GangMemberComponent")
+		if member_comp_check:
+			if member_comp_check.is_available():
 				available_members += 1
 			else:
 				busy_members += 1
@@ -262,8 +262,8 @@ func _execute_goal(world_state: Dictionary) -> void:
 func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", parameters: Dictionary = {}) -> bool:
 	# Check if we already have this type of order in queue
 	for order_entity in order_queue:
-		var order_comp = order_entity.get_component("OrderComponent")
-		if order_comp and order_comp.order_type == order_type and order_comp.target_id == target_id:
+		var existing_order_comp = order_entity.get_component("OrderComponent")
+		if existing_order_comp and existing_order_comp.order_type == order_type and existing_order_comp.target_id == target_id:
 			Logger.debug("Order already in queue", "AI", {
 				"type": OrderComponent.OrderType.keys()[order_type]
 			})
@@ -355,8 +355,8 @@ func _assign_orders_to_members() -> void:
 	# Get available members
 	var available_members: Array = []
 	for member_entity in faction_comp.get_members():
-		var member_comp = member_entity.get_component("GangMemberComponent")
-		if member_comp and member_comp.is_available() and member_comp.role != GangMemberComponent.ROLE_COMMANDER:
+		var member_comp_available = member_entity.get_component("GangMemberComponent")
+		if member_comp_available and member_comp_available.is_available() and member_comp_available.role != GangMemberComponent.ROLE_COMMANDER:
 			available_members.append(member_entity)
 	
 	if available_members.is_empty():
@@ -397,8 +397,8 @@ func _assign_orders_to_members() -> void:
 		# Find best member for this order
 		var best_member = _select_member_for_order(available_members, order_comp)
 		if best_member:
-			var member_comp = best_member.get_component("GangMemberComponent")
-			if member_comp.assign_order(order_entity):
+			var member_comp_assign = best_member.get_component("GangMemberComponent")
+			if member_comp_assign.assign_order(order_entity):
 				available_members.erase(best_member)
 				assigned_orders.append(order_entity)
 	

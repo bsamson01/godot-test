@@ -34,7 +34,7 @@ func _on_detached(_entity: Entity) -> void:
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.unsubscribe(EventBus.EventType.AI_STATE_CHANGED, _on_ai_state_changed)
 
-func update(delta: float) -> void:
+func update(_delta: float) -> void:
 	if not enabled or not is_enabled:
 		return
 	
@@ -89,7 +89,7 @@ func _update_cached_state() -> void:
 	cached_state.clear()
 	cache_valid_until = Time.get_ticks_msec() / 1000.0 + 5.0  # Cache for 5 seconds
 
-func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
+func _evaluate_goals(_world_state: Dictionary) -> Array[Dictionary]:
 	# Override in subclasses to evaluate possible goals
 	return []
 
@@ -129,7 +129,7 @@ func _set_goal(goal: Dictionary) -> void:
 			}
 		)
 
-func _execute_goal(world_state: Dictionary) -> void:
+func _execute_goal(_world_state: Dictionary) -> void:
 	# Override in subclasses to execute the current goal
 	pass
 
