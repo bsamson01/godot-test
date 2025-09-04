@@ -22,17 +22,17 @@ class_name GameConfig
 
 # AI configuration
 @export_group("AI Settings")
-@export var commander_think_interval: float = 5.0
-@export var member_think_interval: float = 2.0
+@export var commander_think_interval: float = 0.5  # 10x faster
+@export var member_think_interval: float = 0.2  # 10x faster
 @export var ai_think_budget_ms: float = 16.0
 @export var max_ai_updates_per_frame: int = 10
 @export var max_orders_in_queue: int = 10
 
 # Order configuration
 @export_group("Order Settings")
-@export var order_travel_time_base: float = 5.0
-@export var order_work_time_base: float = 10.0
-@export var order_return_time_base: float = 5.0
+@export var order_travel_time_base: float = 0.5  # 10x faster
+@export var order_work_time_base: float = 1.0  # 10x faster
+@export var order_return_time_base: float = 0.5  # 10x faster
 @export var supply_order_priority: int = 80
 @export var defend_order_priority: int = 90
 @export var spy_order_priority: int = 60

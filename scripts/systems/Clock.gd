@@ -4,7 +4,7 @@ class_name Clock
 signal tick(time_data: Dictionary)
 
 @export var ticks_per_day: int = 24
-@export var tick_interval: float = 1.0  # seconds between ticks
+@export var tick_interval: float = 0.1  # seconds between ticks (10x faster)
 
 var current_tick: int = 0
 var is_running: bool = false

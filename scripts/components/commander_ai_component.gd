@@ -98,6 +98,38 @@ func _update_cached_state() -> void:
 	
 	cache_valid_until = Time.get_ticks_msec() / 1000.0 + 10.0  # Cache for 10 seconds
 
+func _think() -> void:
+	# Get current world state
+	var world_state = _gather_world_state()
+	
+	# Debug logging
+	Logger.debug("Commander AI thinking", "AI", {
+		"commander": entity.id,
+		"supplies": world_state.get("supplies", 0),
+		"funds": world_state.get("funds", 0),
+		"member_count": world_state.get("member_count", 0)
+	})
+	
+	# Evaluate possible goals
+	var goals = _evaluate_goals(world_state)
+	
+	# Debug goals
+	Logger.debug("Commander AI goals evaluated", "AI", {
+		"commander": entity.id,
+		"goals_count": goals.size(),
+		"goals": goals
+	})
+	
+	# Select best goal
+	var best_goal = _select_goal(goals)
+	
+	if best_goal and best_goal.name != current_goal:
+		_set_goal(best_goal)
+	
+	# Execute current goal
+	if current_goal:
+		_execute_goal(world_state)
+
 func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	var goals: Array[Dictionary] = []
 	

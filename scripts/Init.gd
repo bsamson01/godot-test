@@ -96,6 +96,15 @@ func _create_gang_member_ecs(faction_id: String, role: String, entity_manager: E
 	member_comp.faction_id = faction_id
 	member_entity.add_component(member_comp)
 	
+	# Add AI component based on role
+	if role == GangMemberComponent.ROLE_COMMANDER:
+		var ai_comp = CommanderAIComponent.new()
+		member_entity.add_component(ai_comp)
+	else:
+		var ai_comp = AIComponent.new()
+		ai_comp.ai_type = "member"
+		member_entity.add_component(ai_comp)
+	
 	return member_entity
 
 func _create_territory_ecs(faction_id: String, territory_name: String, entity_manager: EntityManager) -> Entity:

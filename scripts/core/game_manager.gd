@@ -10,7 +10,7 @@ var logger: Logger
 # Game state
 var is_running: bool = false
 var game_time: float = 0.0
-var tick_rate: float = 1.0  # Seconds per game tick
+var tick_rate: float = 0.1  # Seconds per game tick (10x faster)
 var tick_accumulator: float = 0.0
 var current_tick: int = 0
 
@@ -214,8 +214,14 @@ func _update_components(delta: float) -> void:
 	var start_time = Time.get_ticks_usec()
 	updates_this_frame = 0
 	
-	# Update all entities with update-able components
-	var entities_to_update = entity_manager.get_entities_with_components(["AIComponent", "GangMemberComponent"])
+	# Update all entities with AI components (both base AIComponent and CommanderAIComponent)
+	var entities_to_update = entity_manager.get_entities_with_component("AIComponent")
+	var commander_entities = entity_manager.get_entities_with_component("CommanderAIComponent")
+	
+	# Combine both lists and remove duplicates
+	for entity in commander_entities:
+		if not entities_to_update.has(entity):
+			entities_to_update.append(entity)
 	
 	for entity in entities_to_update:
 		if updates_this_frame >= max_updates_per_frame:

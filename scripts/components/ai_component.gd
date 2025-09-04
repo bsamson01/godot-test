@@ -95,7 +95,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 
 func _select_goal(goals: Array[Dictionary]) -> Dictionary:
 	# Select highest priority goal
-	var best_goal = null
+	var best_goal = {}
 	var best_priority = -1.0
 	
 	for goal in goals:
