@@ -262,8 +262,11 @@ func _check_order_progress() -> void:
 	match current_state:
 		MemberState.TRAVELING:
 			if elapsed >= order_comp.travel_time:
+				# Start working and execute the order
 				change_state(MemberState.WORKING)
 				order_progress = 0.0
+				# Execute the order when we start working
+				_execute_order()
 				
 		MemberState.WORKING:
 			if elapsed >= order_comp.work_time:
@@ -279,16 +282,57 @@ func _check_order_progress() -> void:
 				order_progress = 0.0
 				change_state(MemberState.IDLE)
 
+func _execute_order() -> void:
+	if not current_order:
+		return
+	
+	var order_comp = current_order.get_component("OrderComponent")
+	if not order_comp:
+		return
+	
+	# Execute the order
+	var success = order_comp.execute(entity)
+	if not success:
+		Logger.warning("Order execution failed", "GangMember", {
+			"member": member_name,
+			"order_id": current_order.id,
+			"reason": order_comp.failure_reason
+		})
+		# Cancel the order if execution failed
+		cancel_order("Execution failed: " + order_comp.failure_reason)
+		return
+	
+	Logger.info("Order execution started", "GangMember", {
+		"member": member_name,
+		"order_id": current_order.id,
+		"order_type": order_comp.order_type
+	})
+
 func _complete_order() -> void:
 	if not current_order:
 		return
 	
-	missions_completed += 1
+	var order_comp = current_order.get_component("OrderComponent")
+	if not order_comp:
+		return
 	
-	Logger.info("Order completed by gang member", "GangMember", {
-		"member": member_name,
-		"order_id": current_order.id
-	})
+	# Complete the order and get results
+	var result = order_comp.complete(entity)
+	
+	if result.get("success", false):
+		missions_completed += 1
+		Logger.info("Order completed successfully by gang member", "GangMember", {
+			"member": member_name,
+			"order_id": current_order.id,
+			"effects": result
+		})
+	else:
+		missions_failed += 1
+		Logger.info("Order failed", "GangMember", {
+			"member": member_name,
+			"order_id": current_order.id,
+			"reason": result.get("reason", "Unknown")
+		})
 	
 	# Emit completion event
 	if Engine.has_singleton("EventBus"):
@@ -297,7 +341,8 @@ func _complete_order() -> void:
 			{
 				"order_id": current_order.id,
 				"member_id": entity.id,
-				"faction_id": faction_id
+				"faction_id": faction_id,
+				"success": result.get("success", false)
 			},
 			10  # Higher priority
 		)

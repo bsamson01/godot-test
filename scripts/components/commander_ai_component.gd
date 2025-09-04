@@ -133,8 +133,19 @@ func _think() -> void:
 func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	var goals: Array[Dictionary] = []
 	
+	# Get values with defaults
+	var supplies = world_state.get("supplies", 0.0)
+	var funds = world_state.get("funds", 0.0)
+	var member_count = world_state.get("member_count", 0)
+	var territory_count = world_state.get("territory_count", 0)
+	var available_members = world_state.get("available_members", 0)
+	var threats = world_state.get("threats", [])
+	var opportunities = world_state.get("opportunities", [])
+	var intel = world_state.get("intel", {})
+	var supply_consumption = world_state.get("supply_consumption", 1.0)
+	
 	# Critical supply maintenance
-	if world_state.supplies < CRITICAL_SUPPLIES:
+	if supplies < CRITICAL_SUPPLIES:
 		goals.append({
 			"name": "emergency_supplies",
 			"priority": 100.0,
@@ -142,7 +153,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Defense against threats
-	if world_state.threats.size() > 0 and world_state.supplies < 300:
+	if threats.size() > 0 and supplies < 300:
 		goals.append({
 			"name": "defend_territory",
 			"priority": 90.0,
@@ -150,8 +161,8 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Regular supply maintenance
-	var days_of_supplies = world_state.supplies / max(world_state.supply_consumption, 1.0)
-	if days_of_supplies < 5 and world_state.funds > MIN_FUNDS_FOR_OPERATIONS:
+	var days_of_supplies = supplies / max(supply_consumption, 1.0)
+	if days_of_supplies < 5 and funds > MIN_FUNDS_FOR_OPERATIONS:
 		goals.append({
 			"name": "maintain_supplies",
 			"priority": 80.0 * goal_weights.maintain_supplies,
@@ -159,7 +170,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Intelligence gathering
-	if world_state.funds > MIN_FUNDS_FOR_OPERATIONS and world_state.intel.size() < world_state.threats.size():
+	if funds > MIN_FUNDS_FOR_OPERATIONS and intel.size() < threats.size():
 		goals.append({
 			"name": "gather_intel",
 			"priority": 60.0 * goal_weights.gather_intel,
@@ -167,7 +178,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Recruitment
-	if world_state.member_count < 5 and world_state.funds > 2000:
+	if member_count < 5 and funds > 2000:
 		goals.append({
 			"name": "recruit_members",
 			"priority": 70.0 * goal_weights.recruit_members,
@@ -175,7 +186,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Expansion
-	if world_state.funds > 1000 and world_state.member_count >= 5:
+	if funds > 1000 and member_count >= 5:
 		goals.append({
 			"name": "expand_territory",
 			"priority": 50.0 * goal_weights.expand_territory,
@@ -183,7 +194,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Diplomacy
-	if world_state.opportunities.size() > 0:
+	if opportunities.size() > 0:
 		goals.append({
 			"name": "improve_relations",
 			"priority": 40.0 * goal_weights.improve_relations,
@@ -191,7 +202,7 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Patrol territories
-	if world_state.territory_count > 0 and world_state.available_members > 0:
+	if territory_count > 0 and available_members > 0:
 		goals.append({
 			"name": "patrol_territories",
 			"priority": 30.0,
