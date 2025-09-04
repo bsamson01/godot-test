@@ -55,10 +55,10 @@ func assign_order(order: Order) -> bool:
 func _generate_id() -> String:
 	return "member_" + str(randi())
 
-static func create_random(faction_id: String, role: String = "") -> GangMember:
+static func create_random(new_faction_id: String, new_role: String = "") -> GangMember:
 	var member = GangMember.new()
-	member.faction_id = faction_id
-	member.role = role if role != "" else ROLES[randi() % ROLES.size()]
+	member.faction_id = new_faction_id
+	member.role = new_role if new_role != "" else ROLES[randi() % ROLES.size()]
 	member.name = _get_random_name()
 	member.loyalty = randf_range(70, 100)
 	member.personality = ["Loyal", "Greedy", "Paranoid"][randi() % 3]

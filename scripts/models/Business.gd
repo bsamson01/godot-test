@@ -18,13 +18,13 @@ func _init():
 func _generate_id() -> String:
 	return "business_" + str(randi())
 
-static func random_business(territory_id: String, faction_id: String) -> Business:
+static func random_business(new_territory_id: String, new_faction_id: String) -> Business:
 	var business = Business.new()
 
 	business.name = BUSINESS_NAMES[randi() % BUSINESS_NAMES.size()]
 	business.type = BUSINESS_TYPES[randi() % BUSINESS_TYPES.size()]
-	business.territory_id = territory_id
-	business.faction_id = faction_id
+	business.territory_id = new_territory_id
+	business.faction_id = new_faction_id
 
 	return business
 	

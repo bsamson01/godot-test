@@ -144,4 +144,3 @@ func _get_unassigned_businesses() -> Array:
 		if owner == "":
 			unassigned_businesses.append(business_node)
 	return unassigned_businesses
-
