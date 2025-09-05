@@ -44,7 +44,7 @@ func _set_random_target(character):
 		var random_pos = test_positions[randi() % test_positions.size()]
 		character.updateTargetLocation(random_pos)
 
-func _process(delta):
+func _process(_delta):
 	# Every 3 seconds, give characters new random targets
 	if int(Time.get_time_dict_from_system().second) % 3 == 0:
 		for character in characters:

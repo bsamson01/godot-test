@@ -13,7 +13,7 @@ func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	if not game_manager:
 		game_manager = get_node("../GameManager") as GameManager
 	if not game_manager or not game_manager.entity_manager:
-		print("ERROR: GameManager not found! ECS system required.")
+		Logger.error("GameManager not found! ECS system required.", "Init")
 		return
 	
 	var _entity_manager = game_manager.entity_manager
@@ -22,13 +22,13 @@ func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	var available_bases = _get_unassigned_bases()
 	var available_businesses = _get_unassigned_businesses()
 	
-	print("Found %d unassigned bases and %d unassigned businesses" % [available_bases.size(), available_businesses.size()])
+	Logger.info("Found %d unassigned bases and %d unassigned businesses" % [available_bases.size(), available_businesses.size()], "Init")
 	
 	# Create factions using the ECS system
 	for i in range(config.faction_count):
 		_create_faction_ecs(i, available_bases, available_businesses, config, game_manager)
 	
-	print("Init completed - factions created using ECS system")
+	Logger.info("Init completed - factions created using ECS system", "Init")
 
 func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
 	if not game_manager:
@@ -55,9 +55,9 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 			baseText.text = faction_comp.faction_name
 			baseText.modulate = faction_comp.color
 		faction_comp.base_location = base_node.global_position
-		print("Assigned base at %s to faction %s" % [base_node.global_position, faction_comp.faction_name])
+		Logger.info("Assigned base at %s to faction %s" % [base_node.global_position, faction_comp.faction_name], "Init")
 	else:
-		print("No available bases for faction %s" % faction_comp.faction_name)
+		Logger.warning("No available bases for faction %s" % faction_comp.faction_name, "Init")
 	
 	# Create commander
 	var commander = _create_gang_member_ecs(faction_entity.id, GangMemberComponent.ROLE_COMMANDER, entity_manager)
@@ -87,7 +87,7 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, available_b
 	# Assign visual business nodes to this faction
 	_assign_business_nodes_to_faction(faction_entity.id, faction_comp, available_businesses)
 	
-	print("Created faction %s with %d members" % [faction_comp.faction_name, faction_comp.get_members().size()])
+	Logger.info("Created faction %s with %d members" % [faction_comp.faction_name, faction_comp.get_members().size()], "Init")
 
 
 func _create_gang_member_ecs(faction_id: String, role: String, entity_manager: EntityManager) -> Entity:
@@ -196,16 +196,16 @@ func _assign_business_nodes_to_faction(faction_id: String, faction_comp: Faction
 					business_label.text = faction_comp.faction_name + " Business"
 					business_label.modulate = faction_comp.color
 			
-			print("Assigned business at %s to faction %s" % [business_node.global_position, faction_comp.faction_name])
+			Logger.info("Assigned business at %s to faction %s" % [business_node.global_position, faction_comp.faction_name], "Init")
 		else:
-			print("No available businesses for faction %s" % faction_comp.faction_name)
+			Logger.warning("No available businesses for faction %s" % faction_comp.faction_name, "Init")
 			break
 
 func _create_gang_member_visual_node(member_entity: Entity, base_location: Vector3, faction_color: Color):
 	# Get the gang member component
 	var member_comp = member_entity.get_component("GangMemberComponent")
 	if not member_comp:
-		print("ERROR: Gang member entity missing GangMemberComponent")
+		Logger.error("Gang member entity missing GangMemberComponent", "Init")
 		return
 	
 	# Create visual node using the existing player scene
@@ -226,7 +226,7 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 		if main_scene:
 			main_scene.add_child(member_node)
 		else:
-			print("ERROR: Could not find parent scene to add gang member")
+			Logger.error("Could not find parent scene to add gang member", "Init")
 			return
 	
 	# Set member reference
@@ -244,7 +244,7 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 			new_material.albedo_color = faction_color
 			new_material.metallic = 0.56  # Match the original material properties
 			mesh.set_surface_override_material(0, new_material)
-			print("Set faction color for gang member: %s (color: %s)" % [member_comp.member_name, faction_color])
+			Logger.debug("Set faction color for gang member: %s (color: %s)" % [member_comp.member_name, faction_color], "Init")
 	
 	# WorldState is disabled - using ECS system instead
 	# No need to register with legacy WorldState
@@ -256,7 +256,7 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 	#	bt_player.behavior_tree = behavior_tree
 	#	bt_player.blackboard.set_var("member_id", member_entity.id)
 	
-	print("Created visual node for gang member: %s" % member_comp.member_name)
+	Logger.debug("Created visual node for gang member: %s" % member_comp.member_name, "Init")
 
 func _find_optimal_spawn_position(base_location: Vector3, _member_id: String) -> Vector3:
 	# Configuration for spawn behavior (same as GameManager)
@@ -286,7 +286,7 @@ func _find_optimal_spawn_position(base_location: Vector3, _member_id: String) ->
 		
 		# Check if position is clear of other members
 		if _is_position_clear(candidate_pos, existing_positions, min_distance_between_members):
-			print("Found optimal spawn position after %d attempts" % (attempt + 1))
+			Logger.debug("Found optimal spawn position after %d attempts" % (attempt + 1), "Init")
 			return candidate_pos
 	
 	# Fallback: spawn near base with small random offset
@@ -295,7 +295,7 @@ func _find_optimal_spawn_position(base_location: Vector3, _member_id: String) ->
 		0,
 		randf_range(-2, 2)
 	)
-	print("Using fallback spawn position after %d failed attempts" % max_attempts)
+	Logger.warning("Using fallback spawn position after %d failed attempts" % max_attempts, "Init")
 	return fallback_pos
 
 func _get_existing_member_positions() -> Array:

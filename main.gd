@@ -7,6 +7,9 @@ var config: GameConfig
 @onready var dashboard = $UI/UIContainer/FactionDashboard if has_node("UI/UIContainer/FactionDashboard") else null
 
 func _ready():
+	# Set up global error handling
+	_setup_error_handling()
+	
 	# Load configuration
 	config = GameConfig.get_default()
 	
@@ -45,8 +48,8 @@ func _ready():
 		event_bus.subscribe(EventBus.EventType.TICK_PROCESSED, _on_tick_processed)
 		event_bus.subscribe(EventBus.EventType.DAY_STARTED, _on_day_started)
 	
-	print("Game initialized with configuration:")
-	print(config.get_summary())
+	Logger.info("Game initialized with configuration:", "Main")
+	Logger.info(config.get_summary(), "Main")
 
 func _on_tick_processed(event: EventBus.Event):
 	# Update UI if available
@@ -60,18 +63,18 @@ func _on_tick_processed(event: EventBus.Event):
 func _on_day_started(event: EventBus.Event):
 	# Day change notifications
 	var day = event.data.get("day", 0)
-	print("\n=== Day %d Started ===" % day)
+	Logger.info("=== Day %d Started ===" % day, "Main")
 
 func _print_performance_stats():
 	if not game_manager:
 		return
 	
 	var stats = game_manager.get_game_stats()
-	print("\n--- Performance Stats ---")
-	print("Entities: %d" % stats.entity_count)
-	print("Updates per frame: %d/%d" % [stats.performance.updates_per_frame, stats.performance.max_updates])
-	print("Event queue size: %d" % stats.event_stats.queue_size)
-	print("Events processed: %d" % stats.event_stats.events_processed)
+	Logger.debug("--- Performance Stats ---", "Main")
+	Logger.debug("Entities: %d" % stats.entity_count, "Main")
+	Logger.debug("Updates per frame: %d/%d" % [stats.performance.updates_per_frame, stats.performance.max_updates], "Main")
+	Logger.debug("Event queue size: %d" % stats.event_stats.queue_size, "Main")
+	Logger.debug("Events processed: %d" % stats.event_stats.events_processed, "Main")
 
 func _input(event):
 	# Debug controls
@@ -80,10 +83,10 @@ func _input(event):
 		if game_manager:
 			if game_manager.is_running:
 				game_manager.pause_game()
-				print("Game paused")
+				Logger.info("Game paused", "Main")
 			else:
 				game_manager.start_game()
-				print("Game resumed")
+				Logger.info("Game resumed", "Main")
 	
 	elif event.is_action_pressed("ui_select"):
 		# Print detailed report
@@ -93,7 +96,7 @@ func _print_detailed_report():
 	if not game_manager:
 		return
 	
-	print("\n=== DETAILED GAME REPORT ===")
+	Logger.info("=== DETAILED GAME REPORT ===", "Main")
 	
 	var entity_manager = Engine.get_singleton("EntityManager")
 	if not entity_manager:
@@ -106,13 +109,13 @@ func _print_detailed_report():
 		if not faction_comp:
 			continue
 		
-		print("\nFaction: %s" % faction_comp.faction_name)
-		print("  Funds: %.1f | Supplies: %.1f" % [faction_comp.funds, faction_comp.supplies])
-		print("  Members: %d | Territories: %d | Businesses: %d" % [
+		Logger.info("Faction: %s" % faction_comp.faction_name, "Main")
+		Logger.info("  Funds: %.1f | Supplies: %.1f" % [faction_comp.funds, faction_comp.supplies], "Main")
+		Logger.info("  Members: %d | Territories: %d | Businesses: %d" % [
 			faction_comp.get_members().size(),
 			faction_comp.get_territories().size(),
 			faction_comp.get_businesses().size()
-		])
+		], "Main")
 		
 		# Commander AI status
 		var commander_ais = faction_comp.get_members().filter(func(m):
@@ -123,11 +126,11 @@ func _print_detailed_report():
 			var ai_comp = commander.get_component("CommanderAIComponent")
 			if ai_comp:
 				var strategy = ai_comp.get_strategy_summary()
-				print("  Commander AI: Goal=%s, Priority=%.1f, Orders=%d" % [
+				Logger.info("  Commander AI: Goal=%s, Priority=%.1f, Orders=%d" % [
 					strategy.current_goal,
 					strategy.goal_priority,
 					strategy.orders_in_queue
-				])
+				], "Main")
 		
 		# Member status summary
 		var states = {}
@@ -137,15 +140,46 @@ func _print_detailed_report():
 				var state = GangMemberComponent.MemberState.keys()[member_comp.current_state]
 				states[state] = states.get(state, 0) + 1
 		
-		print("  Member States:", states)
+		Logger.info("  Member States: " + str(states), "Main")
 	
 	# System stats
 	var stats = game_manager.get_game_stats()
-	print("\nSystem Performance:")
-	print("  " + JSON.stringify(stats.entity_stats))
-	print("  " + JSON.stringify(stats.event_stats))
+	Logger.info("System Performance:", "Main")
+	Logger.info("  " + JSON.stringify(stats.entity_stats), "Main")
+	Logger.info("  " + JSON.stringify(stats.event_stats), "Main")
+
+func _setup_error_handling():
+	# Set up custom error handling
+	# Note: Godot doesn't have a global error signal, so we'll handle errors
+	# through the Logger system and try-catch blocks where needed
+	
+	Logger.info("Error handling initialized", "ErrorHandler")
+	
+	# Test logging system
+	_test_logging_system()
+
+func _test_logging_system():
+	# Test different log levels
+	Logger.debug("This is a debug message", "Test")
+	Logger.info("This is an info message", "Test")
+	Logger.warning("This is a warning message", "Test")
+	Logger.error("This is a test error message", "Test")
+	Logger.critical("This is a critical message", "Test")
+	
+	# Test with data
+	Logger.info("Test with data", "Test", {"test_value": 42, "test_array": [1, 2, 3]})
+	
+	# Log file paths
+	Logger.info("Log files created:", "Test", {
+		"game_log": Logger.get_log_file_path(),
+		"error_log": Logger.get_error_log_file_path()
+	})
+
 
 func _exit_tree():
 	# Save configuration on exit
 	if config:
 		config.save_to_file("user://game_config1.json")
+	
+	# Flush logs before exit
+	Logger.flush_logs()

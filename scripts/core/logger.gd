@@ -13,12 +13,14 @@ enum LogLevel {
 # Configuration
 var current_log_level: LogLevel = LogLevel.INFO
 var max_log_entries: int = 10000
-var enable_file_logging: bool = false
+var enable_file_logging: bool = true
 var log_file_path: String = "user://game_log.txt"
+var error_log_path: String = "user://error_log.txt"
 
 # Log storage
 var log_entries: Array[Dictionary] = []
 var log_file: FileAccess
+var error_log_file: FileAccess
 
 # Performance tracking
 var log_counts: Dictionary = {
@@ -36,7 +38,10 @@ func _init():
 	if instance == null:
 		instance = self
 		if enable_file_logging:
-			_open_log_file()
+			_open_log_files()
+		
+		# Set up global error handling
+		_setup_global_error_handling()
 
 func _ready():
 	set_process(false)  # We don't need _process
@@ -44,6 +49,8 @@ func _ready():
 func _exit_tree():
 	if log_file:
 		log_file.close()
+	if error_log_file:
+		error_log_file.close()
 
 static func debug(message: String, category: String = "General", data: Dictionary = {}) -> void:
 	if instance:
@@ -103,9 +110,16 @@ func _log(level: LogLevel, message: String, category: String, data: Dictionary) 
 			push_error("[CRITICAL] " + formatted)
 	
 	# File output
-	if enable_file_logging and log_file:
-		log_file.store_line(formatted)
-		log_file.flush()
+	if enable_file_logging:
+		# Write to general log file
+		if log_file:
+			log_file.store_line(formatted)
+			log_file.flush()
+		
+		# Write errors and critical to separate error log file
+		if level >= LogLevel.ERROR and error_log_file:
+			error_log_file.store_line(formatted)
+			error_log_file.flush()
 
 func _format_log_entry(entry: Dictionary) -> String:
 	var level_names = {
@@ -125,11 +139,33 @@ func _format_log_entry(entry: Dictionary) -> String:
 	
 	return formatted
 
-func _open_log_file() -> void:
+func _open_log_files() -> void:
+	# Open general log file
 	log_file = FileAccess.open(log_file_path, FileAccess.WRITE)
 	if log_file == null:
 		push_error("Failed to open log file: " + log_file_path)
 		enable_file_logging = false
+		return
+	
+	# Open error log file
+	error_log_file = FileAccess.open(error_log_path, FileAccess.WRITE)
+	if error_log_file == null:
+		push_error("Failed to open error log file: " + error_log_path)
+		# Don't disable file logging completely, just error logging
+	
+	# Write initial log entries
+	if log_file:
+		log_file.store_line("=== GAME LOG STARTED ===")
+		log_file.store_line("Timestamp: " + Time.get_datetime_string_from_system())
+		log_file.store_line("Log Level: " + LogLevel.keys()[current_log_level])
+		log_file.store_line("=====================================")
+		log_file.flush()
+	
+	if error_log_file:
+		error_log_file.store_line("=== ERROR LOG STARTED ===")
+		error_log_file.store_line("Timestamp: " + Time.get_datetime_string_from_system())
+		error_log_file.store_line("=====================================")
+		error_log_file.flush()
 
 func set_log_level(level: LogLevel) -> void:
 	current_log_level = level
@@ -212,3 +248,36 @@ static func end_timer(operation: String, start_time: int) -> void:
 		"elapsed_us": elapsed,
 		"elapsed_ms": elapsed_ms
 	})
+
+# File management utilities
+static func get_log_file_path() -> String:
+	if instance:
+		return instance.log_file_path
+	return ""
+
+static func get_error_log_file_path() -> String:
+	if instance:
+		return instance.error_log_path
+	return ""
+
+# Force flush all log files
+static func flush_logs() -> void:
+	if instance and instance.log_file:
+		instance.log_file.flush()
+	if instance and instance.error_log_file:
+		instance.error_log_file.flush()
+
+# Get log file sizes
+static func get_log_file_sizes() -> Dictionary:
+	var sizes = {}
+	if instance and instance.log_file:
+		sizes["game_log"] = instance.log_file.get_length()
+	if instance and instance.error_log_file:
+		sizes["error_log"] = instance.error_log_file.get_length()
+	return sizes
+
+# Global error handling setup
+func _setup_global_error_handling():
+	# Set up error logging - we'll use try-catch blocks in critical areas
+	# and manual error logging where needed
+	info("Global error handling setup complete", "Logger")

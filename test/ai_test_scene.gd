@@ -56,11 +56,11 @@ func _setup_locations():
 func _spawn_test_members():
 	# Spawn members for Faction 1
 	for i in range(3):
-		var member = spawn_gang_member(faction_1.id, faction_1_base.global_position)
+		spawn_gang_member(faction_1.id, faction_1_base.global_position)
 		
 	# Spawn members for Faction 2
 	for i in range(3):
-		var member = spawn_gang_member(faction_2.id, faction_2_base.global_position)
+		spawn_gang_member(faction_2.id, faction_2_base.global_position)
 
 func spawn_gang_member(faction_id: String, spawn_pos: Vector3) -> GangMember:
 	# Create member data
@@ -96,7 +96,7 @@ func _create_test_orders():
 	# Create a patrol order for faction 1
 	var members_1 = get_faction_members(faction_1.id)
 	if members_1.size() > 0:
-		var order = WorldState.create_order(
+		WorldState.create_order(
 			Order.TYPE_PATROL_TERRITORY,
 			members_1[0].id,
 			{}
