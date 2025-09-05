@@ -46,8 +46,8 @@ func _on_attached(_entity: Entity) -> void:
 	last_wander_time = Time.get_ticks_msec() / 1000.0
 	
 	# Add some randomness to wandering behavior
-	wander_cooldown = randf_range(2.0, 6.0)  # 2-6 seconds between movements
-	wander_radius = randf_range(10.0, 20.0)  # 10-20 unit wander radius
+	wander_cooldown = randf_range(3.0, 8.0)  # 3-8 seconds between movements
+	wander_radius = randf_range(15.0, 30.0)  # 15-30 unit wander radius for better recruitment
 	
 	# Subscribe to events
 	if Engine.has_singleton("EventBus"):
@@ -219,6 +219,10 @@ func generate_wander_target() -> Vector3:
 	return target
 
 func can_wander() -> bool:
+	# Don't wander if being recruited
+	if is_recruited and recruited_by != "":
+		return false
+	
 	var current_time = Time.get_ticks_msec() / 1000.0
 	return (current_time - last_wander_time) >= wander_cooldown
 
@@ -229,8 +233,12 @@ func start_wandering() -> void:
 		last_wander_time = Time.get_ticks_msec() / 1000.0
 		
 		# Occasionally vary the wander radius for more interesting movement
-		if randf() < 0.1:  # 10% chance
-			wander_radius = randf_range(8.0, 25.0)
+		if randf() < 0.15:  # 15% chance to change wander radius
+			wander_radius = randf_range(15.0, 35.0)
+		
+		# Occasionally change wander cooldown for more dynamic movement
+		if randf() < 0.1:  # 10% chance to change cooldown
+			wander_cooldown = randf_range(2.0, 10.0)
 
 # Event handlers
 func _on_entity_killed(event: EventBus.Event) -> void:

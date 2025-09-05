@@ -644,10 +644,11 @@ func _process_npc_wandering(npc_entity: Entity, npc_comp: NPCComponent) -> void:
 		var distance_from_spawn = current_pos.distance_to(npc_comp.spawn_position)
 		
 		# Safety check: if NPC is too far from spawn, reset wandering
-		if distance_from_spawn > npc_comp.wander_radius * 1.5:
+		# Increased tolerance for recruitment purposes - NPCs can wander further
+		if distance_from_spawn > npc_comp.wander_radius * 3.0:
 			npc_comp.is_wandering = false
 			npc_comp.current_target = Vector3.ZERO
-			Logger.warning("NPC wandered too far from spawn, resetting", "GameManager", {
+			Logger.debug("NPC wandered too far from spawn, resetting", "GameManager", {
 				"npc_id": npc_entity.id,
 				"npc_name": npc_comp.npc_name,
 				"distance_from_spawn": distance_from_spawn,
