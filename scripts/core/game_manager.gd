@@ -610,13 +610,66 @@ func _find_ground_level(candidate_pos: Vector3) -> Vector3:
 		return candidate_pos
 
 func _process_npcs() -> void:
-	# Process NPCs (currently just placeholder for future NPC behavior)
+	# Process NPCs with wandering behavior
 	var npcs = entity_manager.get_entities_with_component("NPCComponent")
 	for npc_entity in npcs:
 		var npc_comp = npc_entity.get_component("NPCComponent")
-		if npc_comp:
-			# Future: Add NPC wandering behavior here
-			pass
+		if npc_comp and not npc_comp.is_recruited:
+			_process_npc_wandering(npc_entity, npc_comp)
+
+func _process_npc_wandering(npc_entity: Entity, npc_comp: NPCComponent) -> void:
+	# Get the visual node for this NPC
+	var npc_node = _get_npc_visual_node(npc_entity)
+	if not npc_node:
+		return
+	
+	# Check if NPC should start wandering
+	if not npc_comp.is_wandering and npc_comp.can_wander():
+		npc_comp.start_wandering()
+		if npc_comp.is_wandering:
+			# Update the visual node's target
+			npc_node.updateTargetLocation(npc_comp.current_target)
+			Logger.debug("NPC started wandering", "GameManager", {
+				"npc_id": npc_entity.id,
+				"npc_name": npc_comp.npc_name,
+				"target": npc_comp.current_target,
+				"wander_radius": npc_comp.wander_radius,
+				"spawn_pos": npc_comp.spawn_position
+			})
+	
+	# Check if NPC has reached its target
+	elif npc_comp.is_wandering:
+		var current_pos = npc_node.global_position
+		var distance_to_target = current_pos.distance_to(npc_comp.current_target)
+		var distance_from_spawn = current_pos.distance_to(npc_comp.spawn_position)
+		
+		# Safety check: if NPC is too far from spawn, reset wandering
+		if distance_from_spawn > npc_comp.wander_radius * 1.5:
+			npc_comp.is_wandering = false
+			npc_comp.current_target = Vector3.ZERO
+			Logger.warning("NPC wandered too far from spawn, resetting", "GameManager", {
+				"npc_id": npc_entity.id,
+				"npc_name": npc_comp.npc_name,
+				"distance_from_spawn": distance_from_spawn,
+				"max_wander_radius": npc_comp.wander_radius
+			})
+		# If close enough to target, stop wandering
+		elif distance_to_target < 2.0:  # 2 unit threshold
+			npc_comp.is_wandering = false
+			npc_comp.current_target = Vector3.ZERO
+			Logger.debug("NPC reached wander target", "GameManager", {
+				"npc_id": npc_entity.id,
+				"npc_name": npc_comp.npc_name
+			})
+
+func _get_npc_visual_node(npc_entity: Entity) -> Node3D:
+	# Find the visual node for this NPC entity
+	var world_scene = get_node("/root/World")
+	if not world_scene:
+		return null
+	
+	var npc_node_name = "NPC_" + npc_entity.id
+	return world_scene.get_node_or_null(npc_node_name)
 
 func _generate_npc() -> void:
 	# Create a new NPC entity
@@ -635,6 +688,9 @@ func _generate_npc() -> void:
 	
 	# Add component to entity
 	npc_entity.add_component(npc_comp)
+	
+	# Set spawn position for wandering behavior (after component is attached)
+	npc_comp.spawn_position = spawn_pos
 	
 	# Create visual node for the NPC
 	_create_npc_visual_node(npc_entity, spawn_pos)

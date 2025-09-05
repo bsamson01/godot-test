@@ -22,6 +22,14 @@ var health: float = 100.0
 var morale: float = 75.0
 var skills: Dictionary = {}
 
+# Wandering behavior
+var last_wander_time: float = 0.0
+var wander_cooldown: float = 3.0  # seconds between movements
+var current_target: Vector3 = Vector3.ZERO
+var is_wandering: bool = false
+var wander_radius: float = 15.0  # how far from spawn they can wander
+var spawn_position: Vector3 = Vector3.ZERO
+
 func get_component_name() -> String:
 	return "NPCComponent"
 
@@ -32,6 +40,14 @@ func _on_attached(_entity: Entity) -> void:
 	
 	# Generate random skills
 	_generate_skills()
+	
+	# Initialize wandering behavior
+	spawn_position = location
+	last_wander_time = Time.get_ticks_msec() / 1000.0
+	
+	# Add some randomness to wandering behavior
+	wander_cooldown = randf_range(2.0, 6.0)  # 2-6 seconds between movements
+	wander_radius = randf_range(10.0, 20.0)  # 10-20 unit wander radius
 	
 	# Subscribe to events
 	if Engine.has_singleton("EventBus"):
@@ -163,6 +179,54 @@ func get_stats() -> Dictionary:
 		"skills": skills,
 		"location": location
 	}
+
+func generate_wander_target() -> Vector3:
+	# Generate a random target within the wander radius
+	var angle = randf() * 2 * PI
+	var distance = randf_range(5.0, wander_radius)
+	
+	var target = spawn_position + Vector3(
+		cos(angle) * distance,
+		0,
+		sin(angle) * distance
+	)
+	
+	# Ensure the target is within reasonable bounds (not too far from spawn)
+	var distance_from_spawn = target.distance_to(spawn_position)
+	if distance_from_spawn > wander_radius:
+		target = spawn_position + (target - spawn_position).normalized() * wander_radius
+	
+	# Additional boundary checking - keep within reasonable world bounds
+	var world_bounds = 100.0  # Adjust this based on your world size
+	target.x = clamp(target.x, -world_bounds, world_bounds)
+	target.z = clamp(target.z, -world_bounds, world_bounds)
+	
+	# Ensure target is not too close to spawn (avoid getting stuck)
+	var min_distance = 3.0
+	if target.distance_to(spawn_position) < min_distance:
+		# Generate a new target in a different direction
+		angle = randf() * 2 * PI
+		target = spawn_position + Vector3(
+			cos(angle) * min_distance,
+			0,
+			sin(angle) * min_distance
+		)
+	
+	return target
+
+func can_wander() -> bool:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	return (current_time - last_wander_time) >= wander_cooldown
+
+func start_wandering() -> void:
+	if can_wander():
+		current_target = generate_wander_target()
+		is_wandering = true
+		last_wander_time = Time.get_ticks_msec() / 1000.0
+		
+		# Occasionally vary the wander radius for more interesting movement
+		if randf() < 0.1:  # 10% chance
+			wander_radius = randf_range(8.0, 25.0)
 
 # Event handlers
 func _on_entity_killed(event: EventBus.Event) -> void:
