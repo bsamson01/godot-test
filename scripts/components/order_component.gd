@@ -249,9 +249,35 @@ func _apply_success_effects(executor_entity: Entity) -> Dictionary:
 			effects["intel_gathered"] = true
 			
 		OrderType.RECRUIT:
-			# Create new member
-			effects["new_member"] = true
+			# Try to recruit an NPC
+			effects["recruitment_attempted"] = true
 			effects["recruitment_cost"] = required_funds
+			
+			# Find a target NPC
+			var target_npc = _find_target_npc()
+			if target_npc:
+				var npc_comp = target_npc.get_component("NPCComponent")
+				if npc_comp:
+					var current_day = int(Time.get_ticks_msec() / 1000.0 / 60.0)  # Rough day calculation
+					var success = npc_comp.attempt_recruitment(assigned_to, current_day)
+					
+					if success:
+						# NPC accepted recruitment - create new member
+						effects["new_member"] = true
+						effects["recruited_npc"] = npc_comp.npc_name
+						effects["recruitment_success"] = true
+						
+						# Remove NPC from world
+						_remove_npc_from_world(target_npc)
+					else:
+						# NPC rejected recruitment
+						effects["recruitment_rejected"] = true
+						effects["rejected_npc"] = npc_comp.npc_name
+						effects["recruitment_success"] = false
+			else:
+				# No NPCs available for recruitment
+				effects["no_npcs_available"] = true
+				effects["recruitment_success"] = false
 			
 		OrderType.PATROL:
 			# Increase territory safety
@@ -318,3 +344,33 @@ func _on_order_completed(event: EventBus.Event) -> void:
 	if event.data.get("order_id") == entity.id:
 		# Order completion is handled by the member component
 		pass
+
+func _find_target_npc() -> Entity:
+	# Find a random NPC that can be recruited
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npcs = entity_manager.get_entities_with_component("NPCComponent")
+		
+		var available_npcs = []
+		for npc_entity in npcs:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp and npc_comp.can_be_recruited(int(Time.get_ticks_msec() / 1000.0 / 60.0)):
+				available_npcs.append(npc_entity)
+		
+		if available_npcs.size() > 0:
+			return available_npcs[randi() % available_npcs.size()]
+	
+	return null
+
+func _remove_npc_from_world(npc_entity: Entity) -> void:
+	# Remove NPC from entity manager
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		entity_manager.remove_entity(npc_entity.id)
+	
+	# Remove visual node from world
+	var world_scene = Engine.get_main_loop().get_root().get_node("World")
+	if world_scene:
+		var npc_node = world_scene.get_node_or_null("NPC_" + npc_entity.id)
+		if npc_node:
+			npc_node.queue_free()

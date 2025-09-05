@@ -222,6 +222,7 @@ func _process_game_tick() -> void:
 	# Process time-based systems
 	_process_businesses(time_of_day)
 	_process_faction_supplies()
+	_process_npcs()
 	
 	if is_new_day:
 		# Reset period stats for all factions
@@ -230,6 +231,11 @@ func _process_game_tick() -> void:
 			var faction_comp = faction_entity.get_component("FactionComponent")
 			if faction_comp:
 				faction_comp.reset_period_stats()
+		
+		# Generate new NPCs every 10 days
+		var current_day = int(current_tick / 24.0)
+		if current_day > 0 and current_day % 10 == 0:
+			_generate_npc()
 		
 		event_bus.emit_event(EventBus.EventType.DAY_STARTED, {"day": current_tick / 24.0})
 
@@ -584,6 +590,108 @@ func _find_ground_level(candidate_pos: Vector3) -> Vector3:
 		# No ground found, return original position
 		return candidate_pos
 
+func _process_npcs() -> void:
+	# Process NPCs (currently just placeholder for future NPC behavior)
+	var npcs = entity_manager.get_entities_with_component("NPCComponent")
+	for npc_entity in npcs:
+		var npc_comp = npc_entity.get_component("NPCComponent")
+		if npc_comp:
+			# Future: Add NPC wandering behavior here
+			pass
+
+func _generate_npc() -> void:
+	# Create a new NPC entity
+	var npc_entity = entity_manager.create_entity("npc_" + str(randi() % 1000000))
+	var npc_comp = preload("res://scripts/components/npc_component.gd").new()
+	
+	# Generate NPC data
+	npc_comp.npc_id = "npc_" + str(randi() % 1000000)
+	npc_comp.npc_name = _generate_npc_name()
+	npc_comp.spawn_day = int(current_tick / 24.0)
+	npc_comp.recruitment_chance = randf_range(0.2, 0.5)  # 20-50% recruitment chance
+	
+	# Find a spawn position
+	var spawn_pos = _find_npc_spawn_position()
+	npc_comp.location = spawn_pos
+	
+	# Add component to entity
+	npc_entity.add_component(npc_comp)
+	
+	# Create visual node for the NPC
+	_create_npc_visual_node(npc_entity, spawn_pos)
+	
+	Logger.info("NPC Generated: " + str({
+		"npc_id": npc_comp.npc_id,
+		"npc_name": npc_comp.npc_name,
+		"spawn_day": npc_comp.spawn_day,
+		"recruitment_chance": npc_comp.recruitment_chance,
+		"location": spawn_pos
+	}))
+
+func _generate_npc_name() -> String:
+	var names = [
+		"Shadow", "Blade", "Raven", "Ghost", "Viper", "Fang", "Storm", "Thunder",
+		"Frost", "Ember", "Crystal", "Steel", "Iron", "Copper", "Silver", "Gold",
+		"Phoenix", "Dragon", "Tiger", "Wolf", "Eagle", "Hawk", "Falcon", "Crow",
+		"Fox", "Bear", "Lion", "Panther", "Jaguar", "Leopard", "Cheetah", "Lynx"
+	]
+	return names[randi() % names.size()]
+
+func _find_npc_spawn_position() -> Vector3:
+	# Find a random position away from existing faction members
+	var base_location = Vector3.ZERO
+	var factions = entity_manager.get_entities_with_component("FactionComponent")
+	if factions.size() > 0:
+		var faction_comp = factions[0].get_component("FactionComponent")
+		if faction_comp:
+			base_location = faction_comp.base_location
+	
+	# Spawn NPCs further away from the base
+	var angle = randf() * 2 * PI
+	var distance = randf_range(20.0, 40.0)  # 20-40 units from base
+	var candidate_pos = base_location + Vector3(
+		cos(angle) * distance,
+		0,
+		sin(angle) * distance
+	)
+	
+	# Find ground level
+	return _find_ground_level(candidate_pos)
+
+func _create_npc_visual_node(npc_entity: Entity, spawn_pos: Vector3) -> void:
+	# Load the NPC scene (reuse player scene for now)
+	var npc_scene = preload("res://test/player.tscn")
+	var npc_node = npc_scene.instantiate()
+	
+	# Set NPC-specific properties before adding to tree
+	npc_node.name = "NPC_" + npc_entity.id
+	
+	# Add to world scene first
+	var world_scene = get_node("/root/World")
+	if world_scene:
+		world_scene.add_child(npc_node)
+		
+		# Now set position and material after node is in tree
+		npc_node.global_position = spawn_pos
+		
+		# Set NPC color (gray)
+		var mesh_instance = npc_node.get_node("MeshInstance3D")
+		if mesh_instance:
+			var material = mesh_instance.get_surface_override_material(0)
+			if material:
+				material.albedo_color = Color(0.5, 0.5, 0.5, 1.0)  # Gray color for NPCs
+		
+		# Register with WorldState for compatibility
+		if Engine.has_singleton("WorldState"):
+			var world_state = Engine.get_singleton("WorldState")
+			world_state.register_gang_member_node(npc_node)
+	
+	Logger.info("NPC Visual Node Created: " + str({
+		"npc_id": npc_entity.id,
+		"position": spawn_pos,
+		"visible": npc_node.visible
+	}))
+
 func get_game_stats() -> Dictionary:
 	return {
 		"game_time": game_time,
@@ -592,6 +700,10 @@ func get_game_stats() -> Dictionary:
 		"entity_count": entity_manager.entity_count,
 		"entity_stats": entity_manager.get_stats(),
 		"event_stats": event_bus.get_stats(),
+		"faction_count": entity_manager.get_entities_with_component("FactionComponent").size(),
+		"gang_member_count": entity_manager.get_entities_with_component("GangMemberComponent").size(),
+		"business_count": entity_manager.get_entities_with_component("BusinessComponent").size(),
+		"npc_count": entity_manager.get_entities_with_component("NPCComponent").size(),
 		"performance": {
 			"updates_per_frame": updates_this_frame,
 			"max_updates": max_updates_per_frame

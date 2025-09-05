@@ -189,8 +189,8 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 			"action": "spy"
 		})
 	
-	# Recruitment
-	if member_count < 5 and funds > 2000:
+	# Recruitment (only if NPCs are available)
+	if member_count < 5 and funds > 2000 and _has_available_npcs():
 		goals.append({
 			"name": "recruit_members",
 			"priority": 70.0 * goal_weights.recruit_members,
@@ -474,3 +474,16 @@ func get_strategy_summary() -> Dictionary:
 		"orders_issued_today": orders_issued_today,
 		"goal_weights": goal_weights.duplicate()
 	}
+
+func _has_available_npcs() -> bool:
+	# Check if there are any NPCs available for recruitment
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npcs = entity_manager.get_entities_with_component("NPCComponent")
+		
+		for npc_entity in npcs:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp and npc_comp.can_be_recruited(int(Time.get_ticks_msec() / 1000.0 / 60.0)):
+				return true
+	
+	return false

@@ -458,8 +458,31 @@ func _get_shop_location() -> Vector3:
 	return Vector3(0, 0, 25)  # Default shop location (25m away)
 
 func _get_recruitment_location() -> Vector3:
-	# Random location for recruitment (within reasonable distance)
+	# Find a random NPC to recruit
+	var npcs = _get_available_npcs()
+	if npcs.size() > 0:
+		var target_npc = npcs[randi() % npcs.size()]
+		var npc_comp = target_npc.get_component("NPCComponent")
+		if npc_comp:
+			return npc_comp.location
+	
+	# Fallback to random location if no NPCs available
 	return Vector3(randf_range(-30, 30), 0, randf_range(-30, 30))
+
+func _get_available_npcs() -> Array:
+	# Get all NPCs that can be recruited
+	var available_npcs = []
+	
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npcs = entity_manager.get_entities_with_component("NPCComponent")
+		
+		for npc_entity in npcs:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp and npc_comp.can_be_recruited(int(Time.get_ticks_msec() / 1000.0 / 60.0)):  # Rough day calculation
+				available_npcs.append(npc_entity)
+	
+	return available_npcs
 
 func _get_patrol_location() -> Vector3:
 	# Random patrol location (within territory bounds)
