@@ -30,7 +30,7 @@ Space - Give characters new targets (test scene)"""
 	modulate = Color(1, 1, 1, 0.8)
 
 func _input(event):
-	if event.is_action_pressed("ui_accept") or event.keycode == KEY_TAB:
+	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.keycode == KEY_TAB):
 		show_help = !show_help
 		visible = show_help
 
