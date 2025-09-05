@@ -477,17 +477,15 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 	# Set faction color
 	if member_node.has_node("MeshInstance3D"):
 		var mesh = member_node.get_node("MeshInstance3D")
-		if mesh and mesh.get_surface_override_material_count() > 0:
-			var material = mesh.get_surface_override_material(0)
-			if material:
-				material.albedo_color = faction_color
-				Logger.info("Set faction color for gang member: %s" % faction_color, "GameManager")
-			else:
-				Logger.warning("Gang member mesh has no material", "GameManager")
+		if mesh:
+			# Create a new material instance to avoid sharing materials
+			var new_material = StandardMaterial3D.new()
+			new_material.albedo_color = faction_color
+			new_material.metallic = 0.56  # Match the original material properties
+			mesh.set_surface_override_material(0, new_material)
+			Logger.info("Set faction color for gang member: %s (color: %s)" % [member_comp.member_name, faction_color], "GameManager")
 		else:
-			Logger.warning("Gang member mesh has no surface material overrides", "GameManager")
-		# Debug mesh properties
-		Logger.info("Gang member mesh scale: %s, visible: %s" % [mesh.scale, mesh.visible], "GameManager")
+			Logger.warning("Gang member mesh is null", "GameManager")
 	else:
 		Logger.warning("Gang member node missing MeshInstance3D", "GameManager")
 	
@@ -638,29 +636,55 @@ func _generate_npc_name() -> String:
 	return names[randi() % names.size()]
 
 func _find_npc_spawn_position() -> Vector3:
-	# Find a random position away from existing faction members
-	var base_location = Vector3.ZERO
+	# Find a random position away from all faction bases
+	var base_locations = []
 	var factions = entity_manager.get_entities_with_component("FactionComponent")
-	if factions.size() > 0:
-		var faction_comp = factions[0].get_component("FactionComponent")
-		if faction_comp:
-			base_location = faction_comp.base_location
+	for faction_entity in factions:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp and faction_comp.base_location != Vector3.ZERO:
+			base_locations.append(faction_comp.base_location)
 	
-	# Spawn NPCs further away from the base
-	var angle = randf() * 2 * PI
-	var distance = randf_range(20.0, 40.0)  # 20-40 units from base
-	var candidate_pos = base_location + Vector3(
-		cos(angle) * distance,
+	# If no bases found, spawn at origin
+	if base_locations.is_empty():
+		return Vector3(randf_range(-20, 20), 0, randf_range(-20, 20))
+	
+	# Find a position away from all bases
+	var max_attempts = 20
+	for attempt in range(max_attempts):
+		var spawn_angle = randf() * 2 * PI
+		var spawn_distance = randf_range(30.0, 50.0)  # 30-50 units from any base
+		var spawn_candidate = Vector3(
+			cos(spawn_angle) * spawn_distance,
+			0,
+			sin(spawn_angle) * spawn_distance
+		)
+		
+		# Check if this position is far enough from all bases
+		var too_close = false
+		for base_pos in base_locations:
+			if spawn_candidate.distance_to(base_pos) < 25.0:
+				too_close = true
+				break
+		
+		if not too_close:
+			# Find ground level
+			return _find_ground_level(spawn_candidate)
+	
+	# Fallback: spawn far from the first base
+	var first_base = base_locations[0]
+	var fallback_angle = randf() * 2 * PI
+	var fallback_distance = randf_range(40.0, 60.0)
+	var fallback_candidate = first_base + Vector3(
+		cos(fallback_angle) * fallback_distance,
 		0,
-		sin(angle) * distance
+		sin(fallback_angle) * fallback_distance
 	)
 	
-	# Find ground level
-	return _find_ground_level(candidate_pos)
+	return _find_ground_level(fallback_candidate)
 
 func _create_npc_visual_node(npc_entity: Entity, spawn_pos: Vector3) -> void:
-	# Load the NPC scene (reuse player scene for now)
-	var npc_scene = preload("res://test/player.tscn")
+	# Load the dedicated NPC scene
+	var npc_scene = preload("res://test/npc.tscn")
 	var npc_node = npc_scene.instantiate()
 	
 	# Set NPC-specific properties before adding to tree
@@ -671,15 +695,8 @@ func _create_npc_visual_node(npc_entity: Entity, spawn_pos: Vector3) -> void:
 	if world_scene:
 		world_scene.add_child(npc_node)
 		
-		# Now set position and material after node is in tree
+		# Now set position after node is in tree
 		npc_node.global_position = spawn_pos
-		
-		# Set NPC color (gray)
-		var mesh_instance = npc_node.get_node("MeshInstance3D")
-		if mesh_instance:
-			var material = mesh_instance.get_surface_override_material(0)
-			if material:
-				material.albedo_color = Color(0.5, 0.5, 0.5, 1.0)  # Gray color for NPCs
 		
 		# Register with WorldState for compatibility
 		if Engine.has_singleton("WorldState"):

@@ -214,10 +214,13 @@ func _create_gang_member_visual_node(member_entity: Entity, base_location: Vecto
 	# Set faction color
 	if member_node.has_node("MeshInstance3D"):
 		var mesh = member_node.get_node("MeshInstance3D")
-		if mesh and mesh.get_surface_override_material_count() > 0:
-			var material = mesh.get_surface_override_material(0)
-			if material:
-				material.albedo_color = faction_color
+		if mesh:
+			# Create a new material instance to avoid sharing materials
+			var new_material = StandardMaterial3D.new()
+			new_material.albedo_color = faction_color
+			new_material.metallic = 0.56  # Match the original material properties
+			mesh.set_surface_override_material(0, new_material)
+			print("Set faction color for gang member: %s (color: %s)" % [member_comp.member_name, faction_color])
 	
 	# WorldState is disabled - using ECS system instead
 	# No need to register with legacy WorldState

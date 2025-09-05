@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://b8h7laj2m3n4p"]
+
+[ext_resource type="Script" path="res://test/npc.gd" id="1_npc"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_npc"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_npc"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+metallic = 0.56
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_npc"]
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+script = ExtResource("1_npc")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_npc")
+surface_material_override/0 = SubResource("StandardMaterial3D_npc")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.8, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("BoxShape3D_npc")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+path_max_distance = 1.0
+
+[node name="childStatus" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 2.07968, 0)
+modulate = Color(0.5, 0.5, 0.5, 1)
+text = "NPC"
