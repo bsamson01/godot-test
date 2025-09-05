@@ -38,6 +38,9 @@ func _create_test_characters():
 		
 		# Set a random target position
 		_set_random_target(character)
+	
+	# Create a specific test for stuck situation - two characters facing each other
+	_create_stuck_test_scenario()
 
 func _set_random_target(character):
 	if character.has_method("updateTargetLocation"):
@@ -49,6 +52,40 @@ func _process(_delta):
 	if int(Time.get_time_dict_from_system().second) % 3 == 0:
 		for character in characters:
 			_set_random_target(character)
+	
+	# Debug: Print collision avoidance status for first few characters
+	if characters.size() > 0:
+		for i in range(min(2, characters.size())):
+			var character = characters[i]
+			if character.has_method("get") and character.get("avoidance_component"):
+				var avoidance_comp = character.get("avoidance_component")
+				if avoidance_comp.has_method("get") and avoidance_comp.get("is_stuck"):
+					print("Character %d: Stuck=%s, Bypass=%s, Recovery=%s" % [
+						i, 
+						avoidance_comp.get("is_stuck"),
+						avoidance_comp.get("bypass_active"),
+						avoidance_comp.get("recovery_active")
+					])
+
+func _create_stuck_test_scenario():
+	# Create two characters that will face each other and get stuck
+	var character_scene = preload("res://scenes/game_character.tscn")
+	
+	# Character 1 - positioned at origin
+	var char1 = character_scene.instantiate()
+	add_child(char1)
+	characters.append(char1)
+	char1.global_position = Vector3(0, 0, 0)
+	char1.updateTargetLocation(Vector3(5, 0, 0))  # Move right
+	
+	# Character 2 - positioned to the right, moving left
+	var char2 = character_scene.instantiate()
+	add_child(char2)
+	characters.append(char2)
+	char2.global_position = Vector3(2, 0, 0)  # Close to char1
+	char2.updateTargetLocation(Vector3(-5, 0, 0))  # Move left (towards char1)
+	
+	print("Created stuck test scenario: Two characters facing each other!")
 
 func _input(event):
 	if event.is_action_pressed("ui_accept"):  # Space key
@@ -56,3 +93,7 @@ func _input(event):
 		for character in characters:
 			_set_random_target(character)
 		print("Gave all characters new random targets!")
+	elif event.is_action_pressed("ui_select"):  # Enter key
+		# Create stuck test scenario
+		_create_stuck_test_scenario()
+		print("Created new stuck test scenario!")
