@@ -19,10 +19,6 @@ config/icon="res://icon.svg"
 
 GlobalClock="*res://scripts/systems/Clock.gd"
 WorldState="*res://WorldState.gd"
-"#Minimalstubforcompatibility[global_group]gang_members"=""
-shop=""
-business=""
-base=""
 
 [input]
 
