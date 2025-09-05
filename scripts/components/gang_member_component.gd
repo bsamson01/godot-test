@@ -485,7 +485,33 @@ func _get_available_npcs() -> Array:
 	return available_npcs
 
 func _get_patrol_location() -> Vector3:
-	# Random patrol location (within territory bounds)
+	# Get faction business location for patrol
+	var faction_entity = _get_faction_entity()
+	if faction_entity:
+		var faction_comp = faction_entity.get_component("FactionComponent")
+		if faction_comp:
+			# Find a business owned by this faction
+			var business_nodes = Engine.get_main_loop().get_root().get_tree().get_nodes_in_group("business")
+			for node in business_nodes:
+				if node.get_meta("owner", "") == faction_entity.id:
+					# Add random offset around the business for patrol variation
+					var business_pos = node.global_position
+					return business_pos + Vector3(
+						randf_range(-5, 5),
+						0,
+						randf_range(-5, 5)
+					)
+	
+	# Fallback: random location near base
+	var base_location = _get_base_location()
+	if base_location != Vector3.ZERO:
+		return base_location + Vector3(
+			randf_range(-10, 10),
+			0,
+			randf_range(-10, 10)
+		)
+	
+	# Final fallback: random location
 	return Vector3(randf_range(-25, 25), 0, randf_range(-25, 25))
 
 func _get_faction_entity() -> Entity:

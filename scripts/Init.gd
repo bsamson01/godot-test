@@ -30,7 +30,7 @@ func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	
 	print("Init completed - factions created using ECS system")
 
-func _create_faction_ecs(faction_index: int, available_bases: Array, _available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
+func _create_faction_ecs(faction_index: int, available_bases: Array, available_businesses: Array, config: Dictionary, game_manager: GameManager = null):
 	if not game_manager:
 		game_manager = get_node("../GameManager") as GameManager
 	var entity_manager = game_manager.entity_manager
@@ -83,6 +83,9 @@ func _create_faction_ecs(faction_index: int, available_bases: Array, _available_
 		for j in range(config.businesses_per_territory):
 			var business = _create_business_ecs(territory.id, faction_entity.id, entity_manager)
 			faction_comp.add_business(business)
+	
+	# Assign visual business nodes to this faction
+	_assign_business_nodes_to_faction(faction_entity.id, faction_comp, available_businesses)
 	
 	print("Created faction %s with %d members" % [faction_comp.faction_name, faction_comp.get_members().size()])
 
@@ -176,6 +179,26 @@ func _get_unassigned_businesses() -> Array:
 		if business_owner == "":
 			unassigned_businesses.append(business_node)
 	return unassigned_businesses
+
+func _assign_business_nodes_to_faction(faction_id: String, faction_comp: FactionComponent, available_businesses: Array):
+	# Assign visual business nodes to this faction
+	var businesses_to_assign = min(available_businesses.size(), 1)  # Assign up to 1 business per faction
+	
+	for i in range(businesses_to_assign):
+		if available_businesses.size() > 0:
+			var business_node = available_businesses.pop_front() as Node3D
+			business_node.set_meta("owner", faction_id)
+			
+			# Update business node visual representation
+			var business_label = business_node.get_node("Label3D") as Label3D
+			if business_label:
+				business_label.text = faction_comp.faction_name + " Business"
+				business_label.modulate = faction_comp.color
+			
+			print("Assigned business at %s to faction %s" % [business_node.global_position, faction_comp.faction_name])
+		else:
+			print("No available businesses for faction %s" % faction_comp.faction_name)
+			break
 
 func _create_gang_member_visual_node(member_entity: Entity, base_location: Vector3, faction_color: Color):
 	# Get the gang member component
