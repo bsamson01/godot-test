@@ -64,6 +64,10 @@ func can_be_recruited(current_day: int) -> bool:
 	if is_recruited:
 		return false
 	
+	# Check if NPC has been alive for at least 4 days
+	if current_day - spawn_day < 4:
+		return false
+	
 	# Check cooldown
 	if current_day - last_recruitment_attempt < recruitment_cooldown:
 		return false

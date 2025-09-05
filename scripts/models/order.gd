@@ -10,6 +10,7 @@ enum OrderType {
 	DEFEND_TERRITORY,
 	COLLECT_PROTECTION,
 	RECRUIT_MEMBERS,
+	RECRUIT_SPECIFIC_NPC,
 	SCOUT_ENEMY,
 	SPY,
 	NEGOTIATE,
@@ -57,6 +58,7 @@ func name() -> String:
 		OrderType.DEFEND_TERRITORY: return 'Defend Territory'
 		OrderType.COLLECT_PROTECTION: return 'Collect Protection'
 		OrderType.RECRUIT_MEMBERS: return 'Recruit Members'
+		OrderType.RECRUIT_SPECIFIC_NPC: return 'Recruit Specific NPC'
 		OrderType.SCOUT_ENEMY: return 'Scout Enemy'
 		OrderType.SPY: return 'Spy'
 		OrderType.NEGOTIATE: return 'Negotiate'
@@ -72,6 +74,7 @@ func get_priority() -> int:
 		OrderType.PATROL_TERRITORY: return 60
 		OrderType.SELL_GOODS: return 50
 		OrderType.RECRUIT_MEMBERS: return 40
+		OrderType.RECRUIT_SPECIFIC_NPC: return 45
 		OrderType.SCOUT_ENEMY: return 30
 		OrderType.SPY: return 70
 		OrderType.NEGOTIATE: return 75
@@ -89,6 +92,7 @@ func get_travel_time() -> float:
 		OrderType.SPY: return 4.0               # 4 seconds to reach target
 		OrderType.ATTACK_ENEMY: return 5.0      # 5 seconds to reach enemy
 		OrderType.RECRUIT_MEMBERS: return 3.0   # 3 seconds to reach recruitment area
+		OrderType.RECRUIT_SPECIFIC_NPC: return 4.0  # 4 seconds to reach specific NPC
 		OrderType.PATROL_TERRITORY: return 2.0  # 2 seconds to reach patrol area
 		OrderType.COLLECT_PROTECTION: return 4.0 # 4 seconds to reach business
 		OrderType.SCOUT_ENEMY: return 6.0       # 6 seconds to reach enemy territory
@@ -107,6 +111,7 @@ func get_work_time() -> float:
 		OrderType.SPY: return 5.0                # 5 seconds to gather intel
 		OrderType.ATTACK_ENEMY: return 6.0       # 6 seconds to attack
 		OrderType.RECRUIT_MEMBERS: return 4.0    # 4 seconds to recruit
+		OrderType.RECRUIT_SPECIFIC_NPC: return 6.0  # 6 seconds to chat and convince NPC
 		OrderType.PATROL_TERRITORY: return 8.0   # 8 seconds patrolling
 		OrderType.COLLECT_PROTECTION: return 3.0 # 3 seconds to collect
 		OrderType.SCOUT_ENEMY: return 10.0       # 10 seconds scouting
@@ -164,6 +169,14 @@ func _calculate_requirements() -> void:
 			work_time = 4.0
 			return_time = 3.0
 			priority = 40
+			
+		OrderType.RECRUIT_SPECIFIC_NPC:
+			required_funds = 2000.0
+			travel_time = 4.0
+			work_time = 6.0
+			return_time = 4.0
+			priority = 45
+			success_chance = 0.7
 			
 		OrderType.PATROL_TERRITORY:
 			travel_time = 2.0

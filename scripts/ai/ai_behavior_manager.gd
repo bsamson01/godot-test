@@ -104,6 +104,7 @@ func _setup_blackboard_for_entity(blackboard: Blackboard, entity: Entity) -> voi
 				blackboard.set_var("current_order", member_comp.current_order)
 				blackboard.set_var("order_type", order_comp.get_order_type())
 				blackboard.set_var("order_status", order_comp.get_status())
+				blackboard.set_var("target_npc_id", order_comp.target_id)
 	
 	# Set up AI state
 	ai_states[entity.id] = {
@@ -134,10 +135,12 @@ func update_blackboard_for_entity(entity: Entity) -> void:
 				blackboard.set_var("current_order", member_comp.current_order)
 				blackboard.set_var("order_type", order_comp.get_order_type())
 				blackboard.set_var("order_status", order_comp.get_status())
+				blackboard.set_var("target_npc_id", order_comp.target_id)
 		else:
 			blackboard.set_var("current_order", null)
 			blackboard.set_var("order_type", -1)
 			blackboard.set_var("order_status", -1)
+			blackboard.set_var("target_npc_id", "")
 	
 	# Update AI state
 	if ai_states.has(entity.id):

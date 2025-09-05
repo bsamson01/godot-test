@@ -56,6 +56,13 @@ func consider_new_orders():
 	# PATROL: idle members + territories => patrol them
 	if idle_members.size() > 0 and territories.size() > 0:
 		maybe_queue_order(Order.OrderType.PATROL_TERRITORY)
+	
+	# RECRUIT_SPECIFIC_NPC: if we have funds and there are recruitable NPCs
+	if faction_comp.funds > 2000 and members.size() < 8:
+		var recruitable_npcs = _get_recruitable_npcs()
+		if recruitable_npcs.size() > 0:
+			var target_npc = recruitable_npcs[randi() % recruitable_npcs.size()]
+			maybe_queue_order(Order.OrderType.RECRUIT_SPECIFIC_NPC, target_npc.id)
 
 
 func maybe_queue_order(order_type: int, target_id: String = "") -> bool:
@@ -104,6 +111,22 @@ func reevaluate_order_queue():
 		if _is_order_still_valid(order):
 			valid_orders.append(order)
 	order_queue = valid_orders
+
+func _get_recruitable_npcs() -> Array:
+	var recruitable_npcs = []
+	
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npcs = entity_manager.get_entities_with_component("NPCComponent")
+		
+		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))  # Rough day calculation
+		
+		for npc_entity in npcs:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp and npc_comp.can_be_recruited(current_day):
+				recruitable_npcs.append(npc_entity)
+	
+	return recruitable_npcs
 
 func assign_orders_to_members():
 	var faction_entity = get_faction_entity()

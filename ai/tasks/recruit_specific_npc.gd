@@ -1,69 +1,13 @@
-# execute_order.gd - Execute the current order
 extends BTAction
 
-func _tick(_delta: float) -> Status:
-	var entity_id = blackboard.get_var("entity_id")
-	if not entity_id:
-		return FAILURE
-	
-	# Get entity from EntityManager
-	var entity_manager = Engine.get_singleton("EntityManager")
-	if not entity_manager:
-		return FAILURE
-	
-	var entity = entity_manager.get_entity(entity_id)
-	if not entity:
-		return FAILURE
-	
-	# Get gang member component
-	var member_comp = entity.get_component("GangMemberComponent")
-	if not member_comp or not member_comp.current_order:
-		return FAILURE
-	
-	# Update blackboard with current state
-	blackboard.set_var("member_state", member_comp.current_state)
-	blackboard.set_var("order_progress", member_comp.order_progress)
-	
-	# Check for specific order types that need special handling
-	var order_comp = member_comp.current_order.get_component("OrderComponent")
-	if order_comp and order_comp.get_order_type() == Order.OrderType.RECRUIT_SPECIFIC_NPC:
-		return _handle_recruit_specific_npc_order(_delta)
-	
-	# The actual order execution is handled by the GangMemberComponent
-	# This task just reports the status
-	
-	match member_comp.current_state:
-		GangMemberComponent.MemberState.TRAVELING:
-			blackboard.set_var("current_action", "traveling")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.WORKING:
-			blackboard.set_var("current_action", "working")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.RETURNING:
-			blackboard.set_var("current_action", "returning")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.IDLE:
-			# Order completed
-			blackboard.set_var("current_action", "idle")
-			return SUCCESS
-		
-		_:
-			return RUNNING
+var target_npc_entity: Entity = null
+var recruitment_state: String = "find_npc"  # find_npc, approach_npc, chat_with_npc, return_to_base
+var chat_timer: float = 0.0
+var chat_duration: float = 6.0  # 6 seconds to chat
+var npc_following: bool = false
 
-func _handle_recruit_specific_npc_order(_delta: float) -> Status:
-	# Get the target NPC ID from the order
-	var target_npc_id = blackboard.get_var("target_npc_id", "")
-	if target_npc_id == "":
-		agent.updateLabel('No target NPC ID')
-		return FAILURE
-	
-	# Get the current state from blackboard
-	var current_state = blackboard.get_var("recruit_state", "find_npc")
-	
-	match current_state:
+func _tick(_delta: float) -> Status:
+	match recruitment_state:
 		"find_npc":
 			return _find_target_npc()
 		"approach_npc":
@@ -76,18 +20,22 @@ func _handle_recruit_specific_npc_order(_delta: float) -> Status:
 			return FAILURE
 
 func _find_target_npc() -> Status:
+	# Get the target NPC ID from the order
 	var target_npc_id = blackboard.get_var("target_npc_id", "")
+	if target_npc_id == "":
+		agent.updateLabel('No target NPC')
+		return FAILURE
 	
 	# Find the NPC entity
 	if Engine.has_singleton("EntityManager"):
 		var entity_manager = Engine.get_singleton("EntityManager")
-		var npc_entity = entity_manager.get_entity(target_npc_id)
+		target_npc_entity = entity_manager.get_entity(target_npc_id)
 		
-		if not npc_entity:
+		if not target_npc_entity:
 			agent.updateLabel('Target NPC not found')
 			return FAILURE
 		
-		var npc_comp = npc_entity.get_component("NPCComponent")
+		var npc_comp = target_npc_entity.get_component("NPCComponent")
 		if not npc_comp:
 			agent.updateLabel('Target has no NPC component')
 			return FAILURE
@@ -100,16 +48,14 @@ func _find_target_npc() -> Status:
 		
 		# Set target position and move to approach phase
 		blackboard.set_var("pos", npc_comp.location)
-		blackboard.set_var("target_npc_entity", npc_entity)
-		blackboard.set_var("recruit_state", "approach_npc")
-		agent.updateLabel('Found target NPC: ' + npc_comp.npc_name)
-		return SUCCESS
+		recruitment_state = "approach_npc"
+		agent.updateLabel('Approaching target NPC')
+		return RUNNING
 	
 	agent.updateLabel('EntityManager not found')
 	return FAILURE
 
 func _approach_npc(_delta: float) -> Status:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if not target_npc_entity:
 		return FAILURE
 	
@@ -125,58 +71,55 @@ func _approach_npc(_delta: float) -> Status:
 	var distance_to_npc = current_pos.distance_to(npc_comp.location)
 	
 	if distance_to_npc < 3.0:  # Close enough to chat
-		blackboard.set_var("recruit_state", "chat_with_npc")
-		blackboard.set_var("chat_timer", 0.0)
+		recruitment_state = "chat_with_npc"
+		chat_timer = 0.0
 		agent.updateLabel('Chatting with NPC')
-		return SUCCESS
+		return RUNNING
 	
-	agent.updateLabel('Approaching NPC')
 	return RUNNING
 
 func _chat_with_npc(_delta: float) -> Status:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if not target_npc_entity:
 		return FAILURE
 	
-	var chat_timer = blackboard.get_var("chat_timer", 0.0)
 	chat_timer += _delta
-	blackboard.set_var("chat_timer", chat_timer)
 	
 	# Update NPC position while chatting (they might still be moving)
 	var npc_comp = target_npc_entity.get_component("NPCComponent")
 	if npc_comp:
 		blackboard.set_var("pos", npc_comp.location)
 	
-	# Check if chat is complete (6 seconds)
-	if chat_timer >= 6.0:
+	# Check if chat is complete
+	if chat_timer >= chat_duration:
 		# Attempt recruitment
 		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))
 		var success = npc_comp.attempt_recruitment(agent.member_id, current_day)
 		
 		if success:
 			# NPC is now following us
-			blackboard.set_var("recruit_state", "return_to_base")
+			npc_following = true
+			recruitment_state = "return_to_base"
 			agent.updateLabel('NPC recruited, returning to base')
 			
 			# Set NPC to follow the gang member
-			npc_comp.is_recruited = true
-			npc_comp.recruited_by = agent.member_id
-			npc_comp.is_wandering = false
-			npc_comp.current_target = Vector3.ZERO
+			_set_npc_following(true)
 			
 			# Get base location
 			_get_base_location()
-			return SUCCESS
+			return RUNNING
 		else:
 			agent.updateLabel('Recruitment failed')
 			return FAILURE
 	
 	# Show progress
-	var progress = int((chat_timer / 6.0) * 100)
+	var progress = int((chat_timer / chat_duration) * 100)
 	agent.updateLabel('Chatting with NPC (' + str(progress) + '%)')
 	return RUNNING
 
 func _return_to_base(_delta: float) -> Status:
+	if not npc_following:
+		return FAILURE
+	
 	# Check if we've reached the base
 	var current_pos = agent.global_position
 	var base_pos = blackboard.get_var("pos", Vector3.ZERO)
@@ -189,7 +132,6 @@ func _return_to_base(_delta: float) -> Status:
 		return SUCCESS
 	
 	# Update NPC position to follow us
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if target_npc_entity:
 		var npc_comp = target_npc_entity.get_component("NPCComponent")
 		if npc_comp:
@@ -215,8 +157,21 @@ func _get_base_location() -> void:
 						if faction_comp:
 							blackboard.set_var("pos", faction_comp.base_location)
 
+func _set_npc_following(_following: bool) -> void:
+	if not target_npc_entity:
+		return
+	
+	var npc_comp = target_npc_entity.get_component("NPCComponent")
+	if npc_comp:
+		# Mark NPC as being recruited (following)
+		npc_comp.is_recruited = true
+		npc_comp.recruited_by = agent.member_id
+		
+		# Stop NPC from wandering
+		npc_comp.is_wandering = false
+		npc_comp.current_target = Vector3.ZERO
+
 func _complete_recruitment() -> void:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if not target_npc_entity:
 		return
 	
@@ -232,11 +187,11 @@ func _complete_recruitment() -> void:
 					if faction_entity:
 						var faction_comp = faction_entity.get_component("FactionComponent")
 						if faction_comp:
+							# Add NPC to faction
+							faction_comp.add_member(target_npc_entity)
+							
 							# Convert NPC to gang member
 							_convert_npc_to_gang_member(target_npc_entity, faction_entity.id, faction_comp.color)
-							
-							# Add to faction
-							faction_comp.add_member(target_npc_entity)
 							
 							# Emit recruitment success event
 							if Engine.has_singleton("EventBus"):
@@ -250,7 +205,7 @@ func _complete_recruitment() -> void:
 								)
 
 func _convert_npc_to_gang_member(npc_entity: Entity, faction_id: String, faction_color: Color) -> void:
-	# Get NPC component
+	# Remove NPC component
 	var npc_comp = npc_entity.get_component("NPCComponent")
 	if not npc_comp:
 		return

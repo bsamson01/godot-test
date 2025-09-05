@@ -425,6 +425,10 @@ func _emit_movement_event(state: MemberState) -> void:
 					# Move to recruitment area
 					target_location = _get_recruitment_location()
 					movement_type = "travel_to_recruit"
+				Order.OrderType.RECRUIT_SPECIFIC_NPC:
+					# Move to specific NPC location
+					target_location = _get_target_npc_location()
+					movement_type = "travel_to_recruit_npc"
 				Order.OrderType.PATROL_TERRITORY:
 					# Move to patrol area
 					target_location = _get_patrol_location()
@@ -479,6 +483,31 @@ func _get_recruitment_location() -> Vector3:
 	
 	# Fallback to random location if no NPCs available
 	return Vector3(randf_range(-30, 30), 0, randf_range(-30, 30))
+
+func _get_target_npc_location() -> Vector3:
+	# Get the target NPC ID from the current order
+	if not current_order:
+		return Vector3.ZERO
+	
+	var order_comp = current_order.get_component("OrderComponent")
+	if not order_comp:
+		return Vector3.ZERO
+	
+	var target_npc_id = order_comp.target_id
+	if target_npc_id == "":
+		return Vector3.ZERO
+	
+	# Find the NPC entity
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npc_entity = entity_manager.get_entity(target_npc_id)
+		
+		if npc_entity:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp:
+				return npc_comp.location
+	
+	return Vector3.ZERO
 
 func _get_available_npcs() -> Array:
 	# Get all NPCs that can be recruited
