@@ -2,8 +2,8 @@ extends Node
 
 func init_all(config: Dictionary = {}, game_manager: GameManager = null):
 	var default_config = {
-		"faction_count": 1,
-		"members_per_faction": 2,
+		"faction_count": 2,
+		"members_per_faction": 3,
 		"territories_per_faction": 1,
 		"businesses_per_faction": 1
 	}

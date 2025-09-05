@@ -61,6 +61,14 @@ class_name GameConfig
 @export var speed_multiplier: float = 1.0  # Global speed multiplier
 @export var fast_travel_enabled: bool = true
 
+# Collision avoidance configuration
+@export_group("Collision Avoidance Settings")
+@export var avoidance_radius: float = 2.0  # Radius for collision avoidance detection
+@export var avoidance_strength: float = 3.0  # Strength of avoidance force
+@export var separation_radius: float = 1.5  # Radius for separation behavior
+@export var separation_strength: float = 2.0  # Strength of separation force
+@export var max_avoidance_force: float = 5.0  # Maximum avoidance force magnitude
+
 # Distance configuration
 @export_group("Distance Settings")
 @export var spawn_radius_min: float = 5.0  # Minimum spawn distance from base (meters)

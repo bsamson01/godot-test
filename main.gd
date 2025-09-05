@@ -32,10 +32,10 @@ func _ready():
 	# Initialize the game world with factions, bases, and businesses
 	var init_script = load("res://scripts/Init.gd").new()
 	init_script.init_all({
-		"faction_count": 1,  # Match GameManager config
-		"members_per_faction": 4,  # Changed to 4 gang members
+		"faction_count": 2,  # Create 2 factions
+		"members_per_faction": 3,  # 3 gang members per faction
 		"territories_per_faction": 1,
-		"businesses_per_territory": 2  # Create 2 businesses per territory
+		"businesses_per_territory": 1  # Create 1 business per territory
 	}, game_manager)
 	add_child(init_script)
 	

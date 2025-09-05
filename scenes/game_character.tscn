@@ -30,8 +30,11 @@ behavior_tree = ExtResource("2_7tera")
 blackboard_plan = SubResource("BlackboardPlan_wvbbu")
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
-path_desired_distance = 0.5
-path_max_distance = 1.0
+path_desired_distance = 0.3
+path_height_offset = 0.1
+path_max_distance = 3.0
+avoidance_enabled = true
+avoidance_priority = 0.5
 
 [node name="childStatus" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 2.5, 0)
