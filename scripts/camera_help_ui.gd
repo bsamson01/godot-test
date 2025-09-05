@@ -11,6 +11,7 @@ func _ready():
 WASD / Arrow Keys - Pan camera
 Mouse Wheel - Zoom in/out
 Right Mouse + Drag - Pan camera
+Tab - Toggle this help panel
 
 Game Info:
 2 Factions: Red Vipers vs Blue Shadows
@@ -29,7 +30,7 @@ Space - Give characters new targets (test scene)"""
 	modulate = Color(1, 1, 1, 0.8)
 
 func _input(event):
-	if event.is_action_pressed("ui_tab"):
+	if event.is_action_pressed("ui_accept") or event.keycode == KEY_TAB:
 		show_help = !show_help
 		visible = show_help
 

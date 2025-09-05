@@ -189,11 +189,12 @@ func _assign_business_nodes_to_faction(faction_id: String, faction_comp: Faction
 			var business_node = available_businesses.pop_front() as Node3D
 			business_node.set_meta("owner", faction_id)
 			
-			# Update business node visual representation
-			var business_label = business_node.get_node("Label3D") as Label3D
-			if business_label:
-				business_label.text = faction_comp.faction_name + " Business"
-				business_label.modulate = faction_comp.color
+			# Update business node visual representation (if Label3D exists)
+			if business_node.has_node("Label3D"):
+				var business_label = business_node.get_node("Label3D") as Label3D
+				if business_label:
+					business_label.text = faction_comp.faction_name + " Business"
+					business_label.modulate = faction_comp.color
 			
 			print("Assigned business at %s to faction %s" % [business_node.global_position, faction_comp.faction_name])
 		else:
