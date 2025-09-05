@@ -3,10 +3,19 @@ extends Component
 class_name FactionComponent
 
 @export var faction_name: String = ""
+@export var faction_type: String = "criminal"
 @export var color: Color = Color.WHITE
 @export var funds: float = 1000.0
 @export var supplies: float = 1000.0
 @export var base_location: Vector3 = Vector3.ZERO
+
+enum FactionType {
+	CRIMINAL,
+	POLICE,
+	POLITICAL,
+	CORPORATE,
+	MILITARY
+}
 
 # Relationships by faction ID
 @export var relationships: Dictionary = {} # faction_id -> RelationType

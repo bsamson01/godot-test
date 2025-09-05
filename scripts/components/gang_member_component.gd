@@ -39,8 +39,9 @@ const ROLE_SPY = "Spy"
 const ROLE_HACKER = "Hacker"
 const ROLE_LIEUTENANT = "Lieutenant"
 const ROLE_SNIPER = "Sniper"
+const ROLE_MEMBER = "Member"
 
-const AVAILABLE_ROLES = [ROLE_ENFORCER, ROLE_SPY, ROLE_HACKER, ROLE_LIEUTENANT, ROLE_SNIPER]
+const AVAILABLE_ROLES = [ROLE_ENFORCER, ROLE_SPY, ROLE_HACKER, ROLE_LIEUTENANT, ROLE_SNIPER, ROLE_MEMBER]
 
 # Personalities
 const PERSONALITY_LOYAL = "Loyal"
@@ -65,6 +66,11 @@ func _on_attached(_entity: Entity) -> void:
 		event_bus.subscribe(EventBus.EventType.ORDER_COMPLETED, _on_order_completed)
 		event_bus.subscribe(EventBus.EventType.ORDER_FAILED, _on_order_failed)
 		event_bus.subscribe(EventBus.EventType.ORDER_CANCELLED, _on_order_cancelled)
+	
+	# Update AI behavior manager blackboard
+	if Engine.has_singleton("AIBehaviorManager"):
+		var ai_manager = Engine.get_singleton("AIBehaviorManager")
+		ai_manager.update_blackboard_for_entity(entity)
 
 func _on_detached(_entity: Entity) -> void:
 	# Unsubscribe from events
@@ -84,6 +90,11 @@ func update(delta: float) -> void:
 	if current_order and current_state in [MemberState.TRAVELING, MemberState.WORKING, MemberState.RETURNING]:
 		order_progress += delta
 		_check_order_progress()
+	
+	# Update AI behavior manager blackboard
+	if Engine.has_singleton("AIBehaviorManager"):
+		var ai_manager = Engine.get_singleton("AIBehaviorManager")
+		ai_manager.update_blackboard_for_entity(entity)
 
 func change_state(new_state: MemberState) -> void:
 	if current_state == new_state:
@@ -139,7 +150,7 @@ func assign_order(order_entity: Entity) -> bool:
 	
 	Logger.info("Order assigned to gang member", "GangMember", {
 		"member": member_name,
-		"order_type": order_comp.order_type,
+		"order_type": order_comp.get_order_type(),
 		"order_id": order_entity.id
 	})
 	
@@ -264,12 +275,12 @@ func _check_order_progress() -> void:
 	
 	match current_state:
 		MemberState.TRAVELING:
-			if elapsed >= order_comp.travel_time:
+			if elapsed >= order_comp.get_travel_time():
 				# Start working and execute the order
 				Logger.debug("Order progress: Travel complete, starting work", "GangMember", {
 					"member": member_name,
 					"elapsed": elapsed,
-					"required": order_comp.travel_time
+					"required": order_comp.get_travel_time()
 				})
 				change_state(MemberState.WORKING)
 				order_progress = 0.0
@@ -277,24 +288,24 @@ func _check_order_progress() -> void:
 				_execute_order()
 				
 		MemberState.WORKING:
-			if elapsed >= order_comp.work_time:
+			if elapsed >= order_comp.get_work_time():
 				# Complete the work
 				Logger.debug("Order progress: Work complete, starting return", "GangMember", {
 					"member": member_name,
 					"elapsed": elapsed,
-					"required": order_comp.work_time
+					"required": order_comp.get_work_time()
 				})
 				_complete_order()
 				change_state(MemberState.RETURNING)
 				order_progress = 0.0
 				
 		MemberState.RETURNING:
-			if elapsed >= order_comp.return_time:
+			if elapsed >= order_comp.get_return_time():
 				# Fully complete and return to idle
 				Logger.debug("Order progress: Return complete, order finished", "GangMember", {
 					"member": member_name,
 					"elapsed": elapsed,
-					"required": order_comp.return_time
+					"required": order_comp.get_return_time()
 				})
 				current_order = null
 				order_progress = 0.0
@@ -314,16 +325,16 @@ func _execute_order() -> void:
 		Logger.warning("Order execution failed", "GangMember", {
 			"member": member_name,
 			"order_id": current_order.id,
-			"reason": order_comp.failure_reason
+			"reason": order_comp.get_failure_reason()
 		})
 		# Cancel the order if execution failed
-		cancel_order("Execution failed: " + order_comp.failure_reason)
+		cancel_order("Execution failed: " + order_comp.get_failure_reason())
 		return
 	
 	Logger.info("Order execution started", "GangMember", {
 		"member": member_name,
 		"order_id": current_order.id,
-		"order_type": order_comp.order_type
+		"order_type": order_comp.get_order_type()
 	})
 
 func _complete_order() -> void:
@@ -405,16 +416,16 @@ func _emit_movement_event(state: MemberState) -> void:
 	if current_order:
 		var order_comp = current_order.get_component("OrderComponent")
 		if order_comp:
-			match order_comp.order_type:
-				OrderComponent.OrderType.BUY_SUPPLIES:
+			match order_comp.get_order_type():
+				Order.OrderType.BUY_SUPPLIES:
 					# Move to shop location
 					target_location = _get_shop_location()
 					movement_type = "travel_to_shop"
-				OrderComponent.OrderType.RECRUIT:
+				Order.OrderType.RECRUIT_MEMBERS:
 					# Move to recruitment area
 					target_location = _get_recruitment_location()
 					movement_type = "travel_to_recruit"
-				OrderComponent.OrderType.PATROL:
+				Order.OrderType.PATROL_TERRITORY:
 					# Move to patrol area
 					target_location = _get_patrol_location()
 					movement_type = "travel_to_patrol"

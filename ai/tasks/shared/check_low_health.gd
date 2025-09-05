@@ -1,4 +1,4 @@
-# check_under_attack.gd - Check if gang member is under attack
+# check_low_health.gd - Check if gang member has low health
 extends BTCondition
 
 func _tick(_delta: float) -> Status:
@@ -20,10 +20,10 @@ func _tick(_delta: float) -> Status:
 	if not member_comp:
 		return FAILURE
 	
-	# For now, we'll consider low loyalty as being "under attack"
-	# In a real implementation, this would check for nearby enemies
-	var is_under_attack = member_comp.loyalty < 50.0
+	# Check if member is injured or dead
+	var is_low_health = (member_comp.current_state == GangMemberComponent.MemberState.INJURED or 
+						member_comp.current_state == GangMemberComponent.MemberState.DEAD)
 	
-	blackboard.set_var("is_under_attack", is_under_attack)
+	blackboard.set_var("is_low_health", is_low_health)
 	
-	return SUCCESS if is_under_attack else FAILURE
+	return SUCCESS if is_low_health else FAILURE

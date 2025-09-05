@@ -1,214 +1,333 @@
-# BusinessComponent.gd - Component for business data and income generation
+# BusinessComponent.gd - Component for businesses that can be controlled
 extends Component
 class_name BusinessComponent
 
 @export var business_name: String = ""
-@export var business_type: String = ""
-@export var base_income: float = 50.0
-@export var territory_id: String = ""
-@export var owner_faction_id: String = ""
+@export var business_type: String = "shop"
+@export var location: Vector3 = Vector3.ZERO
+@export var value: float = 5000.0
+@export var income_per_hour: float = 200.0
 
-# Business types and their characteristics
-const BUSINESS_TYPES = {
-	"Nightclub": {"base_income": 100.0, "night_bonus": 0.5, "day_penalty": -0.2},
-	"Barbershop": {"base_income": 40.0, "night_bonus": -0.3, "day_penalty": 0.0},
-	"Casino": {"base_income": 150.0, "night_bonus": 0.3, "day_penalty": -0.1},
-	"Garage": {"base_income": 60.0, "night_bonus": 0.0, "day_penalty": 0.0},
-	"Pawn Shop": {"base_income": 80.0, "night_bonus": 0.1, "day_penalty": 0.0},
-	"Restaurant": {"base_income": 70.0, "night_bonus": 0.2, "day_penalty": 0.1}
-}
-
-# Income tracking
-var income_generated_today: float = 0.0
-var total_income_generated: float = 0.0
+# Control status
+var controlled_by: String = ""  # Faction ID
+var control_level: float = 0.0  # 0-100
+var protection_paid: bool = false
 var last_income_time: float = 0.0
+var territory_id: String = ""  # Territory ID this business belongs to
 
-# Business state
-var operational: bool = true
-var damage_level: float = 0.0  # 0.0 = pristine, 1.0 = destroyed
-var protection_level: float = 0.5  # How well protected the business is
+# Business stats
+var reputation: float = 50.0
+var customer_satisfaction: float = 75.0
+var security_level: float = 40.0
+var efficiency: float = 60.0
+
+# Business operations
+var is_operational: bool = true
+var operational_hours: Dictionary = {"start": 8, "end": 20}  # 8 AM to 8 PM
+var last_operation_check: float = 0.0
+
+# Events
+var events: Array[Dictionary] = []
 
 func get_component_name() -> String:
 	return "BusinessComponent"
 
 func _on_attached(_entity: Entity) -> void:
-	# Subscribe to business events
+	# Generate random name if not set
+	if business_name.is_empty():
+		business_name = _generate_business_name()
+	
+	# Initialize business
+	_initialize_business()
+	
+	# Subscribe to events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
-		event_bus.subscribe(EventBus.EventType.DAMAGE_DEALT, _on_damage_dealt)
+		event_bus.subscribe(EventBus.EventType.FACTION_DESTROYED, _on_faction_destroyed)
 
 func _on_detached(_entity: Entity) -> void:
+	# Unsubscribe from events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
-		event_bus.unsubscribe(EventBus.EventType.DAMAGE_DEALT, _on_damage_dealt)
+		event_bus.unsubscribe(EventBus.EventType.FACTION_DESTROYED, _on_faction_destroyed)
+
+func _initialize_business() -> void:
+	# Set initial values based on business type
+	match business_type:
+		"shop":
+			reputation = randf_range(40, 80)
+			customer_satisfaction = randf_range(60, 90)
+			security_level = randf_range(30, 70)
+			efficiency = randf_range(50, 85)
+			income_per_hour = randf_range(100, 300)
+		
+		"restaurant":
+			reputation = randf_range(30, 90)
+			customer_satisfaction = randf_range(50, 95)
+			security_level = randf_range(20, 60)
+			efficiency = randf_range(40, 80)
+			income_per_hour = randf_range(150, 400)
+		
+		"warehouse":
+			reputation = randf_range(20, 60)
+			customer_satisfaction = randf_range(30, 70)
+			security_level = randf_range(60, 90)
+			efficiency = randf_range(70, 95)
+			income_per_hour = randf_range(200, 500)
+		
+		"nightclub":
+			reputation = randf_range(40, 90)
+			customer_satisfaction = randf_range(60, 95)
+			security_level = randf_range(50, 80)
+			efficiency = randf_range(60, 90)
+			income_per_hour = randf_range(300, 800)
+
+func _generate_business_name() -> String:
+	var prefixes = ["Elite", "Golden", "Royal", "Premium", "Luxury", "Grand", "Supreme", "Ultimate"]
+	var business_types = ["Shop", "Store", "Market", "Boutique", "Emporium", "Mart", "Center", "Plaza"]
+	
+	return prefixes[randi() % prefixes.size()] + " " + business_types[randi() % business_types.size()]
 
 func generate_random() -> void:
-	# Random business type
-	var types = BUSINESS_TYPES.keys()
-	business_type = types[randi() % types.size()]
+	# Generate random business type
+	var business_types = ["shop", "restaurant", "warehouse", "nightclub"]
+	business_type = business_types[randi() % business_types.size()]
 	
-	# Random name based on type
-	business_name = _generate_business_name(business_type)
+	# Generate random name
+	business_name = _generate_business_name()
 	
-	# Set base income from type
-	var type_data = BUSINESS_TYPES.get(business_type, {})
-	base_income = type_data.get("base_income", 50.0)
+	# Generate random location (will be set by the calling code)
+	location = Vector3.ZERO
+	
+	# Generate random value and income
+	value = randf_range(2000, 10000)
+	income_per_hour = randf_range(50, 500)
+	
+	# Initialize business with random stats
+	_initialize_business()
 
 func calculate_income(time_of_day: String) -> float:
-	if not operational or damage_level >= 1.0:
-		return 0.0
+	var multiplier := 1.0
 	
-	var income = base_income
-	var type_data = BUSINESS_TYPES.get(business_type, {})
+	# Time-based multipliers
+	if time_of_day == "Night" and business_type == "nightclub":
+		multiplier += 0.5  # More business at night for nightclubs
+	elif time_of_day == "Day" and business_type == "shop":
+		multiplier += 0.2  # More business during day for shops
+	elif time_of_day == "Evening" and business_type == "restaurant":
+		multiplier += 0.3  # More business in evening for restaurants
 	
-	# Apply time of day modifiers
-	if time_of_day == "Night":
-		income *= (1.0 + type_data.get("night_bonus", 0.0))
-	else:
-		income *= (1.0 + type_data.get("day_penalty", 0.0))
+	# Business stats affect income
+	var efficiency_multiplier = efficiency / 100.0
+	var reputation_multiplier = reputation / 100.0
+	var customer_satisfaction_multiplier = customer_satisfaction / 100.0
 	
-	# Apply damage penalty
-	income *= (1.0 - damage_level)
+	# Combine all multipliers
+	var total_multiplier = multiplier * efficiency_multiplier * reputation_multiplier * customer_satisfaction_multiplier
 	
-	# Apply territory safety bonus (need to get from territory)
-	var territory_safety = _get_territory_safety()
-	income *= (0.5 + territory_safety * 0.5)  # 50% to 100% based on safety
+	# Check if territory is safe (controlled by same faction)
+	var territory_safe = false
+	if territory_id != "" and Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var territory_entity = entity_manager.get_entity(territory_id)
+		if territory_entity:
+			var territory_comp = territory_entity.get_component("TerritoryComponent")
+			if territory_comp and territory_comp.controlled_by == controlled_by:
+				territory_safe = true
 	
-	# Apply protection bonus
-	income *= (0.8 + protection_level * 0.4)  # 80% to 120% based on protection
+	# Territory safety affects income
+	if not territory_safe:
+		total_multiplier -= 0.3  # Scared customers
 	
-	# Track income
-	income_generated_today += income
-	total_income_generated += income
-	last_income_time = Time.get_ticks_msec() / 1000.0
+	# Ensure minimum multiplier
+	total_multiplier = max(0.1, total_multiplier)
 	
-	return income
+	return income_per_hour * total_multiplier
 
-func damage_business(amount: float) -> void:
-	damage_level = min(1.0, damage_level + amount)
-	
-	if damage_level >= 1.0:
-		operational = false
-		Logger.info("Business destroyed", "Business", {
-			"name": business_name,
-			"owner": owner_faction_id
-		})
-		
-		# Emit destruction event
-		if Engine.has_singleton("EventBus"):
-			Engine.get_singleton("EventBus").emit_event(
-				EventBus.EventType.BUSINESS_DESTROYED,
-				{
-					"business_id": entity.id,
-					"business_name": business_name,
-					"territory_id": territory_id,
-					"faction_id": owner_faction_id
-				}
-			)
-	elif damage_level >= 0.5:
-		Logger.warning("Business heavily damaged", "Business", {
-			"name": business_name,
-			"damage": damage_level
-		})
-
-func repair_business(amount: float) -> void:
-	if damage_level <= 0:
+func update(delta: float) -> void:
+	if not is_enabled:
 		return
 	
-	damage_level = max(0, damage_level - amount)
+	# Update business over time
+	_update_business_stats(delta)
 	
-	if damage_level < 1.0 and not operational:
-		operational = true
-		Logger.info("Business repaired and operational", "Business", {
-			"name": business_name,
-			"damage": damage_level
+	# Check operational status
+	_check_operational_status()
+	
+	# Generate income if controlled and operational
+	if controlled_by != "" and control_level > 50.0 and is_operational:
+		_generate_income(delta)
+
+func _update_business_stats(delta: float) -> void:
+	# Reputation changes based on control and protection
+	if controlled_by != "" and protection_paid:
+		# Protected business gains reputation
+		reputation = min(100, reputation + delta * 0.05)
+	else:
+		# Unprotected business loses reputation
+		reputation = max(0, reputation - delta * 0.02)
+	
+	# Customer satisfaction changes based on reputation and efficiency
+	var satisfaction_change = (reputation / 100.0) * (efficiency / 100.0) * delta * 0.1
+	customer_satisfaction = clamp(customer_satisfaction + satisfaction_change, 0, 100)
+	
+	# Security level changes based on control
+	if controlled_by != "" and control_level > 80.0:
+		# High control increases security
+		security_level = min(100, security_level + delta * 0.03)
+	else:
+		# Low control decreases security
+		security_level = max(0, security_level - delta * 0.01)
+	
+	# Efficiency changes based on customer satisfaction
+	efficiency = clamp(efficiency + (customer_satisfaction - 50) * delta * 0.001, 0, 100)
+
+func _check_operational_status() -> void:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var current_hour = int(current_time / 3600) % 24
+	
+	# Check if business should be operational
+	var should_be_operational = (current_hour >= operational_hours.start and current_hour < operational_hours.end)
+	
+	if should_be_operational != is_operational:
+		is_operational = should_be_operational
+		
+		if is_operational:
+			add_event("business_opened", "Business opened for the day")
+		else:
+			add_event("business_closed", "Business closed for the day")
+
+func _generate_income(_delta: float) -> void:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	
+	if last_income_time == 0.0:
+		last_income_time = current_time
+		return
+	
+	var time_since_last_income = current_time - last_income_time
+	var income_interval = 3600.0  # 1 hour in seconds
+	
+	if time_since_last_income >= income_interval:
+		# Calculate income based on efficiency and customer satisfaction
+		var income_multiplier = (efficiency / 100.0) * (customer_satisfaction / 100.0)
+		var income = income_per_hour * income_multiplier * (time_since_last_income / 3600.0)
+		
+		# Give income to controlling faction
+		if Engine.has_singleton("EntityManager"):
+			var entity_manager = Engine.get_singleton("EntityManager")
+			var faction_entity = entity_manager.get_entity(controlled_by)
+			if faction_entity:
+				var faction_comp = faction_entity.get_component("FactionComponent")
+				if faction_comp:
+					faction_comp.add_funds(income, "Business income: " + business_name)
+		
+		last_income_time = current_time
+		
+		Logger.info("Business generated income", "Business", {
+			"business": business_name,
+			"income": income,
+			"faction": controlled_by,
+			"efficiency": efficiency,
+			"customer_satisfaction": customer_satisfaction
 		})
 
-func improve_protection(amount: float) -> void:
-	protection_level = min(1.0, protection_level + amount)
-
-func capture_business(new_owner_id: String) -> void:
-	var old_owner = owner_faction_id
-	owner_faction_id = new_owner_id
+func claim_business(faction_id: String, control_amount: float = 100.0) -> bool:
+	if controlled_by == faction_id:
+		# Already controlled by this faction
+		control_level = min(100, control_level + control_amount)
+		return true
 	
-	# Reset some stats on capture
-	protection_level = max(0.2, protection_level - 0.3)
+	# Check if business can be claimed
+	if control_level > 0 and controlled_by != "":
+		# Business is contested
+		return false
 	
-	Logger.info("Business captured", "Business", {
-		"name": business_name,
-		"old_owner": old_owner,
-		"new_owner": new_owner_id
+	# Claim the business
+	controlled_by = faction_id
+	control_level = control_amount
+	
+	Logger.info("Business claimed", "Business", {
+		"business": business_name,
+		"faction": faction_id,
+		"control_level": control_level
 	})
 	
-	# Emit capture event
-	if Engine.has_singleton("EventBus"):
-		Engine.get_singleton("EventBus").emit_event(
-			EventBus.EventType.BUSINESS_CAPTURED,
-			{
-				"business_id": entity.id,
-				"business_name": business_name,
-				"territory_id": territory_id,
-				"old_faction": old_owner,
-				"new_faction": new_owner_id
-			}
-		)
+	return true
 
-func _get_territory_safety() -> float:
-	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
-	if not entity_manager:
-		return 0.5
+func lose_control(amount: float = 100.0) -> void:
+	control_level = max(0, control_level - amount)
 	
-	var territory = entity_manager.get_entity(territory_id)
-	if not territory:
-		return 0.5
-	
-	var territory_comp = territory.get_component("TerritoryComponent")
-	if not territory_comp:
-		return 0.5
-	
-	return territory_comp.safety_level
+	if control_level <= 0:
+		controlled_by = ""
+		control_level = 0.0
+		protection_paid = false
+		
+		Logger.info("Business lost", "Business", {
+			"business": business_name,
+			"previous_controller": controlled_by
+		})
 
-func _generate_business_name(type: String) -> String:
-	var prefixes = {
-		"Nightclub": ["The Velvet", "Neon", "Electric", "Midnight"],
-		"Barbershop": ["Tony's", "Classic", "Razor's", "The Clean"],
-		"Casino": ["Lucky", "Golden", "Diamond", "Royal"],
-		"Garage": ["Mike's", "Chrome", "Turbo", "Grease"],
-		"Pawn Shop": ["Quick", "Gold", "Cash", "Easy"],
-		"Restaurant": ["Mama's", "The Hungry", "Golden", "Tony's"]
+func is_controlled_by(faction_id: String) -> bool:
+	return controlled_by == faction_id and control_level > 50.0
+
+func get_control_percentage() -> float:
+	return control_level
+
+func is_contested() -> bool:
+	return controlled_by != "" and control_level < 100.0
+
+func pay_protection(faction_id: String, amount: float) -> bool:
+	if controlled_by != faction_id:
+		return false
+	
+	# Check if faction has enough funds
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var faction_entity = entity_manager.get_entity(faction_id)
+		if faction_entity:
+			var faction_comp = faction_entity.get_component("FactionComponent")
+			if faction_comp and faction_comp.funds >= amount:
+				faction_comp.spend_funds(amount, "Protection payment: " + business_name)
+				protection_paid = true
+				
+				Logger.info("Protection payment made", "Business", {
+					"business": business_name,
+					"faction": faction_id,
+					"amount": amount
+				})
+				
+				return true
+	
+	return false
+
+func add_event(event_type: String, description: String, data: Dictionary = {}) -> void:
+	var event = {
+		"type": event_type,
+		"description": description,
+		"timestamp": Time.get_ticks_msec() / 1000.0,
+		"data": data
 	}
 	
-	var suffixes = {
-		"Nightclub": ["Lounge", "Dreams", "Paradise", "Underground"],
-		"Barbershop": ["Cuts", "Fade", "Shop", "Style"],
-		"Casino": ["Palace", "Fortune", "Royale", "Luck"],
-		"Garage": ["Motors", "Repair", "Works", "Auto"],
-		"Pawn Shop": ["Pawn", "Exchange", "Trade", "Cash"],
-		"Restaurant": ["Kitchen", "Grill", "Diner", "Bistro"]
-	}
+	events.append(event)
 	
-	var type_prefixes = prefixes.get(type, ["Generic"])
-	var type_suffixes = suffixes.get(type, ["Business"])
-	
-	var prefix = type_prefixes[randi() % type_prefixes.size()]
-	var suffix = type_suffixes[randi() % type_suffixes.size()]
-	
-	return prefix + " " + suffix
+	# Keep only last 100 events
+	if events.size() > 100:
+		events.pop_front()
 
-func reset_daily_income() -> void:
-	income_generated_today = 0.0
+func get_recent_events(count: int = 10) -> Array[Dictionary]:
+	var start_index = max(0, events.size() - count)
+	return events.slice(start_index)
 
 func validate() -> Validatable.ValidationResult:
 	var result = Validatable.ValidationResult.new()
 	
 	Validatable.validate_not_empty(business_name, "business_name", result)
-	Validatable.validate_not_empty(business_type, "business_type", result)
-	Validatable.validate_positive(base_income, "base_income", result)
-	Validatable.validate_in_range(damage_level, 0, 1, "damage_level", result)
-	Validatable.validate_in_range(protection_level, 0, 1, "protection_level", result)
-	
-	if not BUSINESS_TYPES.has(business_type):
-		result.add_warning("Unknown business type: " + business_type)
+	Validatable.validate_in_range(control_level, 0, 100, "control_level", result)
+	Validatable.validate_positive(value, "value", result)
+	Validatable.validate_in_range(reputation, 0, 100, "reputation", result)
+	Validatable.validate_in_range(customer_satisfaction, 0, 100, "customer_satisfaction", result)
+	Validatable.validate_in_range(security_level, 0, 100, "security_level", result)
+	Validatable.validate_in_range(efficiency, 0, 100, "efficiency", result)
 	
 	return result
 
@@ -216,17 +335,21 @@ func get_stats() -> Dictionary:
 	return {
 		"name": business_name,
 		"type": business_type,
-		"owner": owner_faction_id,
-		"operational": operational,
-		"base_income": base_income,
-		"damage": damage_level,
-		"protection": protection_level,
-		"income_today": income_generated_today,
-		"total_income": total_income_generated
+		"controlled_by": controlled_by,
+		"control_level": control_level,
+		"protection_paid": protection_paid,
+		"reputation": reputation,
+		"customer_satisfaction": customer_satisfaction,
+		"security_level": security_level,
+		"efficiency": efficiency,
+		"income_per_hour": income_per_hour,
+		"value": value,
+		"location": location,
+		"is_operational": is_operational
 	}
 
 # Event handlers
-func _on_damage_dealt(event: EventBus.Event) -> void:
-	if event.data.get("target_id") == entity.id:
-		var damage = event.data.get("amount", 0.1)
-		damage_business(damage)
+func _on_faction_destroyed(event: EventBus.Event) -> void:
+	var destroyed_faction_id = event.data.get("faction_id")
+	if controlled_by == destroyed_faction_id:
+		lose_control(100.0)

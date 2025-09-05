@@ -16,15 +16,13 @@ static func create_behavior_tree() -> BTTask:
 	
 	# Priority 2: Execute orders
 	var order_sequence = BTSequence.new()
-	order_sequence.add_child(preload("res://ai/tasks/shared/check_for_order.gd").new())
-	order_sequence.add_child(preload("res://ai/tasks/shared/select_order_behavior.gd").new())
-	order_sequence.add_child(preload("res://ai/tasks/shared/complete_order.gd").new())
+	order_sequence.add_child(_create_check_for_order())
+	order_sequence.add_child(_create_execute_order())
 	root.add_child(order_sequence)
 	
 	# Priority 3: Idle behavior
 	var idle_sequence = BTSequence.new()
-	idle_sequence.add_child(preload("res://ai/tasks/shared/idle_behavior.gd").new())
-	idle_sequence.add_child(preload("res://ai/tasks/shared/move_to_location.gd").new())
+	idle_sequence.add_child(_create_idle_behavior())
 	root.add_child(idle_sequence)
 	
 	return root
@@ -41,23 +39,48 @@ static func _create_emergency_response() -> BTSelector:
 	# Flee if low health
 	var flee_sequence = BTSequence.new()
 	flee_sequence.add_child(_create_low_health_check())
-	flee_sequence.add_child(preload("res://ai/tasks/shared/flee_to_safety.gd").new())
+	flee_sequence.add_child(_create_flee_action())
 	response.add_child(flee_sequence)
 	
 	# Defend if under attack
 	var defend_sequence = BTSequence.new()
 	defend_sequence.add_child(_create_under_attack_check())
-	defend_sequence.add_child(preload("res://ai/tasks/shared/defend_self.gd").new())
+	defend_sequence.add_child(_create_defend_action())
 	response.add_child(defend_sequence)
 	
 	return response
 
+static func _create_check_for_order() -> BTCondition:
+	var check = BTCondition.new()
+	check.set_script(preload("res://ai/tasks/shared/check_for_order.gd"))
+	return check
+
+static func _create_execute_order() -> BTAction:
+	var action = BTAction.new()
+	action.set_script(preload("res://ai/tasks/shared/execute_order.gd"))
+	return action
+
+static func _create_idle_behavior() -> BTAction:
+	var action = BTAction.new()
+	action.set_script(preload("res://ai/tasks/shared/idle_behavior.gd"))
+	return action
+
 static func _create_low_health_check() -> BTCondition:
 	var check = BTCondition.new()
-	check.set_script(preload("res://ai/tasks/shared/check_health.gd"))
+	check.set_script(preload("res://ai/tasks/shared/check_low_health.gd"))
 	return check
+
+static func _create_flee_action() -> BTAction:
+	var action = BTAction.new()
+	action.set_script(preload("res://ai/tasks/shared/flee_action.gd"))
+	return action
 
 static func _create_under_attack_check() -> BTCondition:
 	var check = BTCondition.new()
 	check.set_script(preload("res://ai/tasks/shared/check_under_attack.gd"))
 	return check
+
+static func _create_defend_action() -> BTAction:
+	var action = BTAction.new()
+	action.set_script(preload("res://ai/tasks/shared/defend_action.gd"))
+	return action

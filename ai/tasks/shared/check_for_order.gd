@@ -1,31 +1,44 @@
+# check_for_order.gd - Check if gang member has an assigned order
 extends BTCondition
 
 func _tick(_delta: float) -> Status:
-	var member = agent.get_member() if agent.has_method("get_member") else null
-	if not member:
+	var entity_id = blackboard.get_var("entity_id")
+	if not entity_id:
 		return FAILURE
-		
-	# Check if member has a current order
-	var current_order = blackboard.get_var("current_order")
-	if current_order and current_order.status == Order.STATUS_IN_PROGRESS:
-		return SUCCESS
-		
-	# Check for new orders from the faction
-	var faction = WorldState.get_faction(member.faction_id)
-	if not faction:
-		return FAILURE
-		
-	# Get pending orders assigned to this member
-	var orders = WorldState.get_orders_for_member(member.id)
-	for order in orders:
-		if order.status == Order.STATUS_PENDING:
-			# Claim the order
-			order.status = Order.STATUS_IN_PROGRESS
-			blackboard.set_var("current_order", order)
-			blackboard.set_var("order_type", order.type)
-			blackboard.set_var("order_data", order.data)
-			return SUCCESS
 	
-	# No orders available
-	blackboard.erase_var("current_order")
-	return FAILURE
+	# Get entity from EntityManager
+	var entity_manager = Engine.get_singleton("EntityManager")
+	if not entity_manager:
+		return FAILURE
+	
+	var entity = entity_manager.get_entity(entity_id)
+	if not entity:
+		return FAILURE
+	
+	# Get gang member component
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		return FAILURE
+	
+	# Check if member has an order
+	var has_order = member_comp.current_order != null
+	blackboard.set_var("has_order", has_order)
+	
+	if has_order:
+		# Update order information in blackboard
+		var order_comp = member_comp.current_order.get_component("OrderComponent")
+		if order_comp:
+			blackboard.set_var("current_order", member_comp.current_order)
+			blackboard.set_var("order_type", order_comp.get_order_type())
+			blackboard.set_var("order_status", order_comp.get_status())
+			blackboard.set_var("order_progress", member_comp.order_progress)
+		
+		return SUCCESS
+	else:
+		# Clear order information
+		blackboard.set_var("current_order", null)
+		blackboard.set_var("order_type", -1)
+		blackboard.set_var("order_status", -1)
+		blackboard.set_var("order_progress", 0.0)
+		
+		return FAILURE

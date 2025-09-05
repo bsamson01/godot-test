@@ -1,190 +1,242 @@
-# TerritoryComponent.gd - Component for territory data and management
+# TerritoryComponent.gd - Component for territory control
 extends Component
 class_name TerritoryComponent
 
 @export var territory_name: String = ""
-@export var owner_faction_id: String = ""
-@export var location: Vector2 = Vector2.ZERO
+@export var territory_type: String = "residential"
+@export var center_location: Vector3 = Vector3.ZERO
+@export var radius: float = 50.0
+@export var value: float = 1000.0
+@export var income_per_hour: float = 100.0
 
-# Territory attributes
-@export var safety_level: float = 0.5  # 0.0 to 1.0
-@export var defense_bonus: float = 0.0
-@export var income_multiplier: float = 1.0
+# Control status
+var controlled_by: String = ""  # Faction ID
+var control_level: float = 0.0  # 0-100
+var last_income_time: float = 0.0
 
-# Business management
-var business_ids: Array[String] = []
-var max_businesses: int = 5
+# Territory stats
+var population: int = 100
+var safety_level: float = 50.0
+var corruption_level: float = 30.0
+var development_level: float = 40.0
 
-# Control tracking
-var control_points: float = 100.0
-var contested: bool = false
-var contesting_faction_id: String = ""
+# Events
+var events: Array[Dictionary] = []
 
 func get_component_name() -> String:
 	return "TerritoryComponent"
 
 func _on_attached(_entity: Entity) -> void:
-	# Subscribe to territory events
+	# Generate random name if not set
+	if territory_name.is_empty():
+		territory_name = _generate_territory_name()
+	
+	# Initialize territory
+	_initialize_territory()
+	
+	# Subscribe to events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
-		event_bus.subscribe(EventBus.EventType.BUSINESS_CAPTURED, _on_business_captured)
-		event_bus.subscribe(EventBus.EventType.BUSINESS_DESTROYED, _on_business_destroyed)
+		event_bus.subscribe(EventBus.EventType.FACTION_DESTROYED, _on_faction_destroyed)
 
 func _on_detached(_entity: Entity) -> void:
+	# Unsubscribe from events
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
-		event_bus.unsubscribe(EventBus.EventType.BUSINESS_CAPTURED, _on_business_captured)
-		event_bus.unsubscribe(EventBus.EventType.BUSINESS_DESTROYED, _on_business_destroyed)
+		event_bus.unsubscribe(EventBus.EventType.FACTION_DESTROYED, _on_faction_destroyed)
 
-func add_business(business_id: String) -> bool:
-	if business_ids.size() >= max_businesses:
-		Logger.warning("Territory at maximum business capacity", "Territory", {
-			"territory": territory_name,
-			"current": business_ids.size(),
-			"max": max_businesses
-		})
-		return false
+func _initialize_territory() -> void:
+	# Set initial values based on territory type
+	match territory_type:
+		"residential":
+			population = randi_range(50, 200)
+			safety_level = randf_range(40, 80)
+			corruption_level = randf_range(20, 60)
+			development_level = randf_range(30, 70)
+			income_per_hour = randf_range(50, 150)
+		
+		"commercial":
+			population = randi_range(20, 100)
+			safety_level = randf_range(30, 70)
+			corruption_level = randf_range(40, 80)
+			development_level = randf_range(50, 90)
+			income_per_hour = randf_range(100, 300)
+		
+		"industrial":
+			population = randi_range(10, 50)
+			safety_level = randf_range(20, 50)
+			corruption_level = randf_range(60, 90)
+			development_level = randf_range(40, 80)
+			income_per_hour = randf_range(80, 200)
+		
+		"downtown":
+			population = randi_range(100, 500)
+			safety_level = randf_range(60, 90)
+			corruption_level = randf_range(10, 40)
+			development_level = randf_range(70, 95)
+			income_per_hour = randf_range(200, 500)
+
+func _generate_territory_name() -> String:
+	var prefixes = ["Old", "New", "East", "West", "North", "South", "Central", "Upper", "Lower"]
+	var names = ["Town", "District", "Quarter", "Heights", "Hills", "Valley", "Square", "Plaza", "Avenue"]
 	
-	if not business_ids.has(business_id):
-		business_ids.append(business_id)
-		_update_territory_stats()
-		return true
-	
-	return false
+	return prefixes[randi() % prefixes.size()] + " " + names[randi() % names.size()]
 
-func remove_business(business_id: String) -> void:
-	business_ids.erase(business_id)
-	_update_territory_stats()
-
-func contest_territory(attacking_faction_id: String) -> void:
-	if contested and contesting_faction_id != attacking_faction_id:
-		Logger.warning("Territory already being contested", "Territory", {
-			"territory": territory_name,
-			"current_attacker": contesting_faction_id,
-			"new_attacker": attacking_faction_id
-		})
+func update(delta: float) -> void:
+	if not is_enabled:
 		return
 	
-	contested = true
-	contesting_faction_id = attacking_faction_id
+	# Update territory over time
+	_update_territory_stats(delta)
 	
-	Logger.info("Territory contested", "Territory", {
-		"territory": territory_name,
-		"defender": owner_faction_id,
-		"attacker": attacking_faction_id
-	})
+	# Generate income if controlled
+	if controlled_by != "" and control_level > 50.0:
+		_generate_income(delta)
 
-func damage_control(amount: float) -> void:
-	control_points = max(0, control_points - amount)
+func _update_territory_stats(delta: float) -> void:
+	# Safety level changes based on control
+	if controlled_by != "":
+		# Controlled territory becomes safer over time
+		safety_level = min(100, safety_level + delta * 0.1)
+	else:
+		# Uncontrolled territory becomes less safe
+		safety_level = max(0, safety_level - delta * 0.05)
 	
-	if control_points <= 0 and contested:
-		_capture_territory()
+	# Corruption level changes based on control
+	if controlled_by != "" and control_level > 80.0:
+		# High control reduces corruption
+		corruption_level = max(0, corruption_level - delta * 0.02)
+	else:
+		# Low control or no control increases corruption
+		corruption_level = min(100, corruption_level + delta * 0.01)
+	
+	# Development level changes based on income
+	if income_per_hour > 0:
+		development_level = min(100, development_level + delta * 0.001)
 
-func restore_control(amount: float) -> void:
-	control_points = min(100, control_points + amount)
+func _generate_income(_delta: float) -> void:
+	var current_time = Time.get_ticks_msec() / 1000.0
 	
-	if control_points >= 100 and contested:
-		contested = false
-		contesting_faction_id = ""
-		Logger.info("Territory defended successfully", "Territory", {
+	if last_income_time == 0.0:
+		last_income_time = current_time
+		return
+	
+	var time_since_last_income = current_time - last_income_time
+	var income_interval = 3600.0  # 1 hour in seconds
+	
+	if time_since_last_income >= income_interval:
+		var income = income_per_hour * (time_since_last_income / 3600.0)
+		
+		# Give income to controlling faction
+		if Engine.has_singleton("EntityManager"):
+			var entity_manager = Engine.get_singleton("EntityManager")
+			var faction_entity = entity_manager.get_entity(controlled_by)
+			if faction_entity:
+				var faction_comp = faction_entity.get_component("FactionComponent")
+				if faction_comp:
+					faction_comp.add_funds(income, "Territory income: " + territory_name)
+		
+		last_income_time = current_time
+		
+		Logger.info("Territory generated income", "Territory", {
 			"territory": territory_name,
-			"owner": owner_faction_id
+			"income": income,
+			"faction": controlled_by
 		})
 
-func _capture_territory() -> void:
-	var old_owner = owner_faction_id
-	owner_faction_id = contesting_faction_id
-	contested = false
-	contesting_faction_id = ""
-	control_points = 100.0
+func claim_territory(faction_id: String, control_amount: float = 100.0) -> bool:
+	if controlled_by == faction_id:
+		# Already controlled by this faction
+		control_level = min(100, control_level + control_amount)
+		return true
 	
-	Logger.info("Territory captured", "Territory", {
+	# Check if territory can be claimed
+	if control_level > 0 and controlled_by != "":
+		# Territory is contested
+		return false
+	
+	# Claim the territory
+	controlled_by = faction_id
+	control_level = control_amount
+	
+	Logger.info("Territory claimed", "Territory", {
 		"territory": territory_name,
-		"old_owner": old_owner,
-		"new_owner": owner_faction_id
+		"faction": faction_id,
+		"control_level": control_level
 	})
 	
-	# Emit capture event
-	if Engine.has_singleton("EventBus"):
-		Engine.get_singleton("EventBus").emit_event(
-			EventBus.EventType.FACTION_TERRITORY_LOST,
-			{
-				"territory_id": entity.id,
-				"territory_name": territory_name,
-				"faction_id": old_owner
-			}
-		)
+	return true
+
+func lose_control(amount: float = 100.0) -> void:
+	control_level = max(0, control_level - amount)
+	
+	if control_level <= 0:
+		controlled_by = ""
+		control_level = 0.0
 		
-		Engine.get_singleton("EventBus").emit_event(
-			EventBus.EventType.FACTION_TERRITORY_GAINED,
-			{
-				"territory_id": entity.id,
-				"territory_name": territory_name,
-				"faction_id": owner_faction_id
-			}
-		)
+		Logger.info("Territory lost", "Territory", {
+			"territory": territory_name,
+			"previous_controller": controlled_by
+		})
 
-func update_safety(delta: float) -> void:
-	# Safety naturally decays
-	safety_level = max(0, safety_level - delta * 0.01)
-	
-	# Contested territories are less safe
-	if contested:
-		safety_level = max(0, safety_level - delta * 0.05)
+func is_controlled_by(faction_id: String) -> bool:
+	return controlled_by == faction_id and control_level > 50.0
 
-func improve_safety(amount: float) -> void:
-	safety_level = min(1.0, safety_level + amount)
+func get_control_percentage() -> float:
+	return control_level
 
-func _update_territory_stats() -> void:
-	# More businesses = higher income multiplier but lower safety
-	var business_count = business_ids.size()
-	income_multiplier = 1.0 + (business_count * 0.1)
-	
-	# Each business slightly reduces safety
-	var safety_penalty = business_count * 0.05
-	safety_level = max(0.1, safety_level - safety_penalty)
+func is_contested() -> bool:
+	return controlled_by != "" and control_level < 100.0
 
-func get_businesses() -> Array:
-	var businesses: Array = []
-	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
+func add_event(event_type: String, description: String, data: Dictionary = {}) -> void:
+	var event = {
+		"type": event_type,
+		"description": description,
+		"timestamp": Time.get_ticks_msec() / 1000.0,
+		"data": data
+	}
 	
-	if entity_manager:
-		for business_id in business_ids:
-			var business = entity_manager.get_entity(business_id)
-			if business:
-				businesses.append(business)
+	events.append(event)
 	
-	return businesses
+	# Keep only last 100 events
+	if events.size() > 100:
+		events.pop_front()
+
+func get_recent_events(count: int = 10) -> Array[Dictionary]:
+	var start_index = max(0, events.size() - count)
+	return events.slice(start_index)
 
 func validate() -> Validatable.ValidationResult:
 	var result = Validatable.ValidationResult.new()
 	
 	Validatable.validate_not_empty(territory_name, "territory_name", result)
-	Validatable.validate_in_range(safety_level, 0, 1, "safety_level", result)
-	Validatable.validate_positive(income_multiplier, "income_multiplier", result)
-	Validatable.validate_in_range(control_points, 0, 100, "control_points", result)
+	Validatable.validate_in_range(control_level, 0, 100, "control_level", result)
+	Validatable.validate_positive(radius, "radius", result)
+	Validatable.validate_positive(value, "value", result)
+	Validatable.validate_in_range(safety_level, 0, 100, "safety_level", result)
+	Validatable.validate_in_range(corruption_level, 0, 100, "corruption_level", result)
+	Validatable.validate_in_range(development_level, 0, 100, "development_level", result)
 	
 	return result
 
 func get_stats() -> Dictionary:
 	return {
 		"name": territory_name,
-		"owner": owner_faction_id,
-		"safety": safety_level,
-		"control": control_points,
-		"contested": contested,
-		"businesses": business_ids.size(),
-		"income_multiplier": income_multiplier
+		"type": territory_type,
+		"controlled_by": controlled_by,
+		"control_level": control_level,
+		"population": population,
+		"safety_level": safety_level,
+		"corruption_level": corruption_level,
+		"development_level": development_level,
+		"income_per_hour": income_per_hour,
+		"value": value,
+		"center_location": center_location,
+		"radius": radius
 	}
 
 # Event handlers
-func _on_business_captured(event: EventBus.Event) -> void:
-	var business_id = event.data.get("business_id")
-	if business_ids.has(business_id):
-		# Business in this territory was captured
-		improve_safety(-0.1)  # Reduce safety when business changes hands
-
-func _on_business_destroyed(event: EventBus.Event) -> void:
-	var business_id = event.data.get("business_id")
-	if business_ids.has(business_id):
-		remove_business(business_id)
+func _on_faction_destroyed(event: EventBus.Event) -> void:
+	var destroyed_faction_id = event.data.get("faction_id")
+	if controlled_by == destroyed_faction_id:
+		lose_control(100.0)

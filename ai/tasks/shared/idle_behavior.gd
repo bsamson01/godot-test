@@ -1,66 +1,43 @@
+# idle_behavior.gd - Idle behavior when no orders
 extends BTAction
 
-@export var idle_radius: float = 5.0
-@export var min_wait_time: float = 3.0
-@export var max_wait_time: float = 8.0
-
-var _state: String = "waiting"
-var _timer: float = 0.0
-var _wait_duration: float = 0.0
-
-func _enter():
-	_state = "waiting"
-	_timer = 0.0
-	_wait_duration = randf_range(min_wait_time, max_wait_time)
+func _tick(_delta: float) -> Status:
+	var entity_id = blackboard.get_var("entity_id")
+	if not entity_id:
+		return FAILURE
 	
-	if agent.has_method("set_status"):
-		agent.set_status("Idle")
-
-func _tick(delta: float) -> Status:
-	_timer += delta
+	# Get entity from EntityManager
+	var entity_manager = Engine.get_singleton("EntityManager")
+	if not entity_manager:
+		return FAILURE
 	
-	match _state:
-		"waiting":
-			if _timer >= _wait_duration:
-				# Pick a random nearby position
-				var member = agent.get_member() if agent.has_method("get_member") else null
-				if member:
-					var faction = WorldState.get_faction(member.faction_id)
-					if faction and faction.has("base_location"):
-						# Wander near faction base
-						var base_pos = faction.base_location
-						var angle = randf() * TAU
-						var distance = randf() * idle_radius
-						var target_pos = base_pos + Vector3(
-							cos(angle) * distance,
-							0,
-							sin(angle) * distance
-						)
-						blackboard.set_var("target_location", target_pos)
-						_state = "moving"
-						_timer = 0.0
-						if agent.has_method("set_status"):
-							agent.set_status("Wandering")
-				else:
-					# Just pick a random position nearby
-					var current_pos = agent.global_transform.origin
-					var angle = randf() * TAU
-					var distance = randf() * idle_radius
-					var target_pos = current_pos + Vector3(
-						cos(angle) * distance,
-						0,
-						sin(angle) * distance
-					)
-					blackboard.set_var("target_location", target_pos)
-					_state = "moving"
-					_timer = 0.0
-					
-		"moving":
-			# This state is handled by a separate move task
-			# We just reset to waiting
-			_state = "waiting"
-			_timer = 0.0
-			_wait_duration = randf_range(min_wait_time, max_wait_time)
-			return SUCCESS
+	var entity = entity_manager.get_entity(entity_id)
+	if not entity:
+		return FAILURE
+	
+	# Get gang member component
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		return FAILURE
+	
+	# Check if member is available for new orders
+	if member_comp.is_available():
+		# Try to get a new order from OrderManager
+		if Engine.has_singleton("OrderManager"):
+			var order_manager = Engine.get_singleton("OrderManager")
+			var available_orders = order_manager.get_available_orders(member_comp.faction_id)
 			
-	return RUNNING
+			# Try to assign an order
+			for order_entity in available_orders:
+				if order_manager.assign_order_to_member(order_entity, entity):
+					blackboard.set_var("has_order", true)
+					blackboard.set_var("current_action", "assigned_new_order")
+					return SUCCESS
+		
+		# No orders available, just idle
+		blackboard.set_var("current_action", "idle")
+		return RUNNING
+	else:
+		# Member is busy with something else
+		blackboard.set_var("current_action", "busy")
+		return RUNNING

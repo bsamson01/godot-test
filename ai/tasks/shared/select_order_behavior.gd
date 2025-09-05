@@ -1,15 +1,15 @@
 extends BTAction
 
 # Preload behavior trees for each order type
-const BehaviorTrees = {
-	Order.TYPE_BUY_SUPPLIES: preload("res://ai/behaviors/buy_supplies_behavior.tres"),
-	Order.TYPE_SELL_GOODS: preload("res://ai/behaviors/sell_goods_behavior.tres"),
-	Order.TYPE_PATROL_TERRITORY: preload("res://ai/behaviors/patrol_behavior.tres"),
-	Order.TYPE_ATTACK_ENEMY: preload("res://ai/behaviors/attack_behavior.tres"),
-	Order.TYPE_DEFEND_TERRITORY: preload("res://ai/behaviors/defend_behavior.tres"),
-	Order.TYPE_COLLECT_PROTECTION: preload("res://ai/behaviors/collect_protection_behavior.tres"),
-	Order.TYPE_RECRUIT_MEMBERS: preload("res://ai/behaviors/recruit_behavior.tres"),
-	Order.TYPE_SCOUT_ENEMY: preload("res://ai/behaviors/scout_behavior.tres")
+var BehaviorTrees = {
+	Order.OrderType.BUY_SUPPLIES: preload("res://ai/behaviors/buy_supplies_behavior.tres"),
+	Order.OrderType.SELL_GOODS: preload("res://ai/behaviors/sell_goods_behavior.tres"),
+	Order.OrderType.PATROL_TERRITORY: preload("res://ai/behaviors/patrol_behavior.tres"),
+	Order.OrderType.ATTACK_ENEMY: preload("res://ai/behaviors/attack_behavior.tres"),
+	Order.OrderType.DEFEND_TERRITORY: preload("res://ai/behaviors/defend_behavior.tres"),
+	Order.OrderType.COLLECT_PROTECTION: preload("res://ai/behaviors/collect_protection_behavior.tres"),
+	Order.OrderType.RECRUIT_MEMBERS: preload("res://ai/behaviors/recruit_behavior.tres"),
+	Order.OrderType.SCOUT_ENEMY: preload("res://ai/behaviors/scout_behavior.tres")
 }
 
 var _current_subtree: BTTask = null

@@ -224,20 +224,33 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	return goals
 
 func _execute_goal(world_state: Dictionary) -> void:
+	# Execute the current goal by creating appropriate orders
+	if not Engine.has_singleton("OrderManager"):
+		Logger.error("OrderManager not available", "CommanderAI")
+		return
+	
+	var order_manager = Engine.get_singleton("OrderManager")
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		Logger.error("Commander AI missing gang member component", "CommanderAI")
+		return
+	
+	var faction_id = member_comp.faction_id
+	
 	match current_goal:
 		"emergency_supplies", "maintain_supplies":
-			_issue_order(OrderComponent.OrderType.BUY_SUPPLIES, "", {"amount": 1000.0})
+			order_manager.create_order(Order.OrderType.BUY_SUPPLIES, faction_id, {"amount": 1000.0})
 		
 		"defend_territory":
-			_issue_order(OrderComponent.OrderType.DEFEND, "")
+			order_manager.create_order(Order.OrderType.DEFEND_TERRITORY, faction_id, {})
 		
 		"gather_intel":
 			if world_state.threats.size() > 0:
 				var target = world_state.threats[0]
-				_issue_order(OrderComponent.OrderType.SPY, target.faction_id)
+				order_manager.create_order(Order.OrderType.SPY, faction_id, {"target_faction": target.faction_id})
 		
 		"recruit_members":
-			_issue_order(OrderComponent.OrderType.RECRUIT, "")
+			order_manager.create_order(Order.OrderType.RECRUIT_MEMBERS, faction_id, {})
 		
 		"expand_territory":
 			# Find weakest hostile faction
@@ -249,23 +262,24 @@ func _execute_goal(world_state: Dictionary) -> void:
 					weakest_enemy = threat
 			
 			if weakest_enemy:
-				_issue_order(OrderComponent.OrderType.ATTACK, weakest_enemy.faction_id)
+				order_manager.create_order(Order.OrderType.ATTACK_ENEMY, faction_id, {"target_faction": weakest_enemy.faction_id})
 		
 		"improve_relations":
 			if world_state.opportunities.size() > 0:
 				var target = world_state.opportunities[0]
-				_issue_order(OrderComponent.OrderType.NEGOTIATE, target.faction_id)
+				order_manager.create_order(Order.OrderType.NEGOTIATE, faction_id, {"target_faction": target.faction_id})
 		
 		"patrol_territories":
-			_issue_order(OrderComponent.OrderType.PATROL, "")
+			order_manager.create_order(Order.OrderType.PATROL_TERRITORY, faction_id, {})
 
-func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", parameters: Dictionary = {}) -> bool:
+# DEPRECATED: Use OrderManager instead
+func _issue_order_old(order_type: Order.OrderType, target_id: String = "", parameters: Dictionary = {}) -> bool:
 	# Check if we already have this type of order in queue
 	for order_entity in order_queue:
 		var existing_order_comp = order_entity.get_component("OrderComponent")
 		if existing_order_comp and existing_order_comp.order_type == order_type and existing_order_comp.target_id == target_id:
 			Logger.debug("Order already in queue", "AI", {
-				"type": OrderComponent.OrderType.keys()[order_type]
+				"type": Order.OrderType.keys()[order_type]
 			})
 			return false
 	
@@ -311,7 +325,7 @@ func _issue_order(order_type: OrderComponent.OrderType, target_id: String = "", 
 	
 	Logger.info("Commander issued order", "AI", {
 		"commander": entity.id,
-		"order_type": OrderComponent.OrderType.keys()[order_type],
+		"order_type": Order.OrderType.keys()[order_type],
 		"target": target_id,
 		"queue_size": order_queue.size()
 	})
@@ -381,13 +395,13 @@ func _assign_orders_to_members() -> void:
 			continue
 		
 		# Special handling for supply orders - only one at a time
-		if order_comp.order_type == OrderComponent.OrderType.BUY_SUPPLIES:
+		if order_comp.get_order_type() == Order.OrderType.BUY_SUPPLIES:
 			var supply_order_active = false
 			for member in faction_comp.get_members():
 				var m_comp = member.get_component("GangMemberComponent")
 				if m_comp and m_comp.current_order:
 					var o_comp = m_comp.current_order.get_component("OrderComponent")
-					if o_comp and o_comp.order_type == OrderComponent.OrderType.BUY_SUPPLIES:
+					if o_comp and o_comp.get_order_type() == Order.OrderType.BUY_SUPPLIES:
 						supply_order_active = true
 						break
 			
@@ -419,14 +433,14 @@ func _select_member_for_order(members: Array, order_comp: OrderComponent) -> Ent
 		var score = member_comp.get_efficiency()
 		
 		# Role-based scoring
-		match order_comp.order_type:
-			OrderComponent.OrderType.SPY:
+		match order_comp.get_order_type():
+			Order.OrderType.SPY:
 				if member_comp.role == GangMemberComponent.ROLE_SPY:
 					score *= 2.0
-			OrderComponent.OrderType.ATTACK:
+			Order.OrderType.ATTACK_ENEMY:
 				if member_comp.role in [GangMemberComponent.ROLE_ENFORCER, GangMemberComponent.ROLE_SNIPER]:
 					score *= 1.5
-			OrderComponent.OrderType.NEGOTIATE:
+			Order.OrderType.NEGOTIATE:
 				if member_comp.personality == GangMemberComponent.PERSONALITY_LOYAL:
 					score *= 1.3
 		

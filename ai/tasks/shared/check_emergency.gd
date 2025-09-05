@@ -1,43 +1,46 @@
+# check_emergency.gd - Check for emergency situations
 extends BTCondition
 
-@export var health_threshold: float = 30.0
-@export var threat_detection_radius: float = 10.0
-
 func _tick(_delta: float) -> Status:
-	var member = agent.get_member() if agent.has_method("get_member") else null
-	if not member:
+	var entity_id = blackboard.get_var("entity_id")
+	if not entity_id:
 		return FAILURE
-		
-	# Check low health
-	if member.health <= health_threshold:
-		blackboard.set_var("emergency_type", "low_health")
-		blackboard.set_var("emergency_health", member.health)
-		return SUCCESS
-		
-	# Check for nearby threats
-	var agent_pos = agent.global_transform.origin
-	var threats = []
 	
-	for potential_threat in agent.get_tree().get_nodes_in_group("gang_members"):
-		if potential_threat == agent:
-			continue
-			
-		var threat_member = potential_threat.get_member() if potential_threat.has_method("get_member") else null
-		if threat_member and threat_member.faction_id != member.faction_id:
-			var distance = agent_pos.distance_to(potential_threat.global_transform.origin)
-			if distance <= threat_detection_radius:
-				# Check if threat is aggressive (has attack order targeting us)
-				var threat_orders = WorldState.get_orders_for_member(threat_member.id)
-				for order in threat_orders:
-					if order.type == Order.TYPE_ATTACK_ENEMY and order.status == Order.STATUS_IN_PROGRESS:
-						threats.append(potential_threat)
-						break
+	# Get entity from EntityManager
+	var entity_manager = Engine.get_singleton("EntityManager")
+	if not entity_manager:
+		return FAILURE
 	
-	if not threats.is_empty():
-		blackboard.set_var("emergency_type", "under_attack")
-		blackboard.set_var("emergency_threats", threats)
-		return SUCCESS
-		
-	# No emergency
-	blackboard.erase_var("emergency_type")
-	return FAILURE
+	var entity = entity_manager.get_entity(entity_id)
+	if not entity:
+		return FAILURE
+	
+	# Get gang member component
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		return FAILURE
+	
+	# Check for emergency conditions
+	var is_emergency = false
+	var emergency_type = ""
+	
+	# Check if member is injured
+	if member_comp.current_state == GangMemberComponent.MemberState.INJURED:
+		is_emergency = true
+		emergency_type = "injured"
+	
+	# Check if member is dead
+	if member_comp.current_state == GangMemberComponent.MemberState.DEAD:
+		is_emergency = true
+		emergency_type = "dead"
+	
+	# Check if loyalty is critically low
+	if member_comp.loyalty < 20.0:
+		is_emergency = true
+		emergency_type = "low_loyalty"
+	
+	# Update blackboard
+	blackboard.set_var("is_emergency", is_emergency)
+	blackboard.set_var("emergency_type", emergency_type)
+	
+	return SUCCESS if is_emergency else FAILURE

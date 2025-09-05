@@ -75,14 +75,14 @@ func _complete_order(member: GangMember):
 	if not order or not faction:
 		return
 
-	match order.type:
-		Order.TYPE_BUY_SUPPLIES:
+	match order.order_type:
+		Order.OrderType.BUY_SUPPLIES:
 			if faction.funds >= 100:
 				faction.funds -= 100
 				faction.supplies += 3500
 				print("%s bought supplies for %s" % [member.name, faction.name])
 
-		Order.TYPE_SPY:
+		Order.OrderType.SPY:
 			var target_id = order.target_id
 			if target_id != "":
 				# Store dummy intel
@@ -92,7 +92,7 @@ func _complete_order(member: GangMember):
 				}
 				print("%s spied on %s for %s" % [member.name, target_id, faction.name])
 
-		Order.TYPE_ATTACK_ENEMY:
+		Order.OrderType.ATTACK_ENEMY:
 			var success = randf() < 0.6  # Simplified win chance
 			print("%s led an attack. Success: %s" % [member.name, success])
 			if success:
@@ -102,7 +102,7 @@ func _complete_order(member: GangMember):
 				faction.funds -= 500
 				faction.supplies -= 200
 
-		Order.TYPE_DEFEND_TERRITORY:
+		Order.OrderType.DEFEND_TERRITORY:
 			print("%s organized a defensive effort for %s" % [member.name, faction.name])
 			# Slight boost to defense intel or morale
 			faction.intel["defense_readiness"] = {
@@ -110,14 +110,14 @@ func _complete_order(member: GangMember):
 				"tick": WorldState.current_tick
 			}
 
-		Order.TYPE_RECRUIT_MEMBERS:
+		Order.OrderType.RECRUIT_MEMBERS:
 			if faction.funds >= 2000:
 				var new_member = WorldState.spawn_gang_member(faction.id)
 				faction.add_member(new_member)
 				faction.funds -= 1500
 				print("%s recruited a new member: %s" % [member.name, new_member.name])
 
-		Order.TYPE_PATROL_TERRITORY:
+		Order.OrderType.PATROL_TERRITORY:
 			print("%s completed a patrol." % member.name)
 			# Optional: reduce chance of future attacks, or reveal nearby threats
 			faction.intel["last_patrol_tick"] = WorldState.current_tick

@@ -97,7 +97,7 @@ func _create_test_orders():
 	var members_1 = get_faction_members(faction_1.id)
 	if members_1.size() > 0:
 		WorldState.create_order(
-			Order.TYPE_PATROL_TERRITORY,
+			Order.OrderType.PATROL_TERRITORY,
 			members_1[0].id,
 			{}
 		)
@@ -114,21 +114,21 @@ func _input(event):
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
 			KEY_1:
-				create_order_for_faction(faction_1.id, Order.TYPE_BUY_SUPPLIES)
+				create_order_for_faction(faction_1.id, Order.OrderType.BUY_SUPPLIES)
 			KEY_2:
-				create_order_for_faction(faction_1.id, Order.TYPE_PATROL_TERRITORY)
+				create_order_for_faction(faction_1.id, Order.OrderType.PATROL_TERRITORY)
 			KEY_3:
-				create_order_for_faction(faction_1.id, Order.TYPE_ATTACK_ENEMY, {"target_faction": faction_2.id})
+				create_order_for_faction(faction_1.id, Order.OrderType.ATTACK_ENEMY, {"target_faction": faction_2.id})
 			KEY_4:
-				create_order_for_faction(faction_1.id, Order.TYPE_DEFEND_TERRITORY)
+				create_order_for_faction(faction_1.id, Order.OrderType.DEFEND_TERRITORY)
 			KEY_5:
-				create_order_for_faction(faction_2.id, Order.TYPE_BUY_SUPPLIES)
+				create_order_for_faction(faction_2.id, Order.OrderType.BUY_SUPPLIES)
 			KEY_6:
-				create_order_for_faction(faction_2.id, Order.TYPE_PATROL_TERRITORY)
+				create_order_for_faction(faction_2.id, Order.OrderType.PATROL_TERRITORY)
 			KEY_7:
-				create_order_for_faction(faction_2.id, Order.TYPE_ATTACK_ENEMY, {"target_faction": faction_1.id})
+				create_order_for_faction(faction_2.id, Order.OrderType.ATTACK_ENEMY, {"target_faction": faction_1.id})
 			KEY_8:
-				create_order_for_faction(faction_2.id, Order.TYPE_DEFEND_TERRITORY)
+				create_order_for_faction(faction_2.id, Order.OrderType.DEFEND_TERRITORY)
 
 func create_order_for_faction(faction_id: String, order_type: int, data: Dictionary = {}):
 	var members = get_faction_members(faction_id)
@@ -141,7 +141,7 @@ func create_order_for_faction(faction_id: String, order_type: int, data: Diction
 		var current_orders = WorldState.get_orders_for_member(member.id)
 		var has_active_order = false
 		for order in current_orders:
-			if order.status == Order.STATUS_PENDING or order.status == Order.STATUS_IN_PROGRESS:
+			if order.status == Order.OrderStatus.PENDING or order.status == Order.OrderStatus.IN_PROGRESS:
 				has_active_order = true
 				break
 				

@@ -137,7 +137,7 @@ func _create_territory_ecs(faction_id: String, territory_name: String, entity_ma
 	# Add territory component
 	var territory_comp = TerritoryComponent.new()
 	territory_comp.territory_name = territory_name
-	territory_comp.owner_faction_id = faction_id
+	territory_comp.controlled_by = faction_id
 	territory_entity.add_component(territory_comp)
 	
 	return territory_entity
@@ -149,7 +149,7 @@ func _create_business_ecs(territory_id: String, faction_id: String, entity_manag
 	var business_comp = BusinessComponent.new()
 	business_comp.generate_random()
 	business_comp.territory_id = territory_id
-	business_comp.owner_faction_id = faction_id
+	business_comp.controlled_by = faction_id
 	business_entity.add_component(business_comp)
 	
 	return business_entity

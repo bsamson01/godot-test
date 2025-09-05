@@ -6,6 +6,9 @@ class_name GameManager
 var entity_manager: EntityManager
 var event_bus: EventBus
 var logger: Logger
+var order_manager: OrderManager
+var ai_behavior_manager: AIBehaviorManager
+var save_manager: SaveManager
 
 # Game state
 var is_running: bool = false
@@ -58,6 +61,24 @@ func _initialize_subsystems() -> void:
 	logger = Logger.new()
 	logger.name = "Logger"
 	add_child(logger)
+	
+	# Create order manager
+	order_manager = OrderManager.new()
+	order_manager.name = "OrderManager"
+	add_child(order_manager)
+	Engine.register_singleton("OrderManager", order_manager)
+	
+	# Create AI behavior manager
+	ai_behavior_manager = AIBehaviorManager.new()
+	ai_behavior_manager.name = "AIBehaviorManager"
+	add_child(ai_behavior_manager)
+	Engine.register_singleton("AIBehaviorManager", ai_behavior_manager)
+	
+	# Create save manager
+	save_manager = SaveManager.new()
+	save_manager.name = "SaveManager"
+	add_child(save_manager)
+	Engine.register_singleton("SaveManager", save_manager)
 	
 	# Subscribe to critical events
 	event_bus.subscribe(EventBus.EventType.ENTITY_KILLED, _on_entity_killed)
@@ -162,7 +183,7 @@ func _create_territory(faction_id: String, territory_name: String) -> Entity:
 	# Add territory component
 	var territory_comp = TerritoryComponent.new()
 	territory_comp.territory_name = territory_name
-	territory_comp.owner_faction_id = faction_id
+	territory_comp.controlled_by = faction_id
 	territory_entity.add_component(territory_comp)
 	
 	return territory_entity
@@ -174,7 +195,7 @@ func _create_business(territory_id: String, faction_id: String) -> Entity:
 	var business_comp = BusinessComponent.new()
 	business_comp.generate_random()
 	business_comp.territory_id = territory_id
-	business_comp.owner_faction_id = faction_id
+	business_comp.controlled_by = faction_id
 	business_entity.add_component(business_comp)
 	
 	return business_entity
@@ -295,16 +316,16 @@ func _process_businesses(time_of_day: String) -> void:
 		Logger.debug("Business income calculation", "GameManager", {
 			"business_name": business_comp.business_name,
 			"business_type": business_comp.business_type,
-			"base_income": business_comp.base_income,
-			"operational": business_comp.operational,
-			"damage_level": business_comp.damage_level,
+			"base_income": business_comp.income_per_hour,
+			"operational": business_comp.is_operational,
+			"efficiency": business_comp.efficiency,
 			"time_of_day": time_of_day,
 			"calculated_income": income
 		})
 		
 		if income > 0:
 			# Add income to faction funds
-			var faction_entity = entity_manager.get_entity(business_comp.owner_faction_id)
+			var faction_entity = entity_manager.get_entity(business_comp.controlled_by)
 			if faction_entity:
 				var faction_comp = faction_entity.get_component("FactionComponent")
 				if faction_comp:
@@ -318,12 +339,12 @@ func _process_businesses(time_of_day: String) -> void:
 			else:
 				Logger.warning("Faction not found for business income", "GameManager", {
 					"business": business_comp.business_name,
-					"faction_id": business_comp.owner_faction_id
+					"faction_id": business_comp.controlled_by
 				})
 			
 			event_bus.emit_event(EventBus.EventType.BUSINESS_INCOME_GENERATED, {
 				"business_id": business_entity.id,
-				"faction_id": business_comp.owner_faction_id,
+				"faction_id": business_comp.controlled_by,
 				"amount": income,
 				"source": business_comp.business_name
 			})
@@ -375,7 +396,7 @@ func _on_order_completed(event: EventBus.Event) -> void:
 	
 	if order_entity:
 		var order_comp = order_entity.get_component("OrderComponent")
-		if order_comp and order_comp.order_type == OrderComponent.OrderType.RECRUIT:
+		if order_comp and order_comp.get_order_type() == Order.OrderType.RECRUIT_MEMBERS:
 			# Create new member for the faction
 			var faction_id = event.data.get("faction_id")
 			var new_member = _create_gang_member(faction_id)
@@ -726,3 +747,52 @@ func get_game_stats() -> Dictionary:
 			"max_updates": max_updates_per_frame
 		}
 	}
+
+# Save/Load functionality
+func save_game(save_name: String) -> bool:
+	if not save_manager:
+		Logger.error("SaveManager not available", "GameManager")
+		return false
+	
+	return save_manager.save_game(save_name)
+
+func load_game(save_name: String) -> bool:
+	if not save_manager:
+		Logger.error("SaveManager not available", "GameManager")
+		return false
+	
+	# Stop the game before loading
+	stop_game()
+	
+	# Load the save
+	var success = save_manager.load_game(save_name)
+	
+	if success:
+		# Restart the game after loading
+		start_game()
+	
+	return success
+
+func get_save_files() -> Array[String]:
+	if not save_manager:
+		return []
+	
+	return save_manager.get_save_files()
+
+func delete_save(save_name: String) -> bool:
+	if not save_manager:
+		return false
+	
+	return save_manager.delete_save(save_name)
+
+func get_current_save_name() -> String:
+	if not save_manager:
+		return ""
+	
+	return save_manager.get_current_save_name()
+
+func has_current_save() -> bool:
+	if not save_manager:
+		return false
+	
+	return save_manager.has_current_save()
