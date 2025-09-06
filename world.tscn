@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" uid="uid://hwpvh46jn6j3" path="res://main.gd" id="1_036b0"]
 [ext_resource type="Script" uid="uid://chnk75mql4ws1" path="res://scripts/camera_controller.gd" id="1_camera"]
-[ext_resource type="Script" uid="uid://dhir8rqwjqi8p" path="res://scripts/camera_help_ui.gd" id="1_help"]
 [ext_resource type="PackedScene" uid="uid://bgc2ul6r5voac" path="res://test/base.tscn" id="2_1deqs"]
 [ext_resource type="PackedScene" uid="uid://xwqb08b5pnmi" path="res://test/shop.tscn" id="2_aqk2v"]
 [ext_resource type="PackedScene" uid="uid://dls1p48tsiqt3" path="res://test/business.tscn" id="3_1scyw"]
+[ext_resource type="Script" uid="uid://51yo33h6nyby" path="res://scripts/game_helper_ui.gd" id="6_dwbse"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pkg7o"]
 sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
@@ -76,11 +76,11 @@ transform = Transform3D(0.219092, 0, 0, 0, 0.262396, 0, 0, 0, 0.0938164, -0.6059
 transform = Transform3D(-0.00908103, 0.999719, -0.0219119, -0.0188562, 0.0217377, 0.999586, 0.999781, 0.00949045, 0.0186535, 0.0467753, 11.7649, 0)
 script = ExtResource("1_camera")
 
-[node name="CameraHelpUI" type="Control" parent="."]
+[node name="GameUI" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_help")
+script = ExtResource("6_dwbse")

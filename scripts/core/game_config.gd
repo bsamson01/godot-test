@@ -22,8 +22,8 @@ class_name GameConfig
 
 # AI configuration
 @export_group("AI Settings")
-@export var commander_think_interval: float = 0.5  # 10x faster
-@export var member_think_interval: float = 0.2  # 10x faster
+@export var commander_think_interval: float = 5.0  # Normal speed
+@export var member_think_interval: float = 2.0  # Normal speed
 @export var ai_think_budget_ms: float = 16.0
 @export var max_ai_updates_per_frame: int = 10
 @export var max_orders_in_queue: int = 10

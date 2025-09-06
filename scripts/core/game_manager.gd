@@ -13,7 +13,7 @@ var save_manager: SaveManager
 # Game state
 var is_running: bool = false
 var game_time: float = 0.0
-var tick_rate: float = 0.1  # Seconds per game tick (10x faster)
+var tick_rate: float = 1.0  # Seconds per game tick (normal speed)
 var tick_accumulator: float = 0.0
 var current_tick: int = 0
 
