@@ -27,6 +27,11 @@ var current_order: Entity = null  # Order entity
 var order_progress: float = 0.0
 var order_start_time: float = 0.0
 
+# Movement tracking for distance-based timing
+var travel_distance: float = 0.0
+var return_distance: float = 0.0
+var current_speed: float = 3.0  # Default speed, will be updated from character
+
 # Stats
 var missions_completed: int = 0
 var missions_failed: int = 0
@@ -145,13 +150,18 @@ func assign_order(order_entity: Entity) -> bool:
 	order_progress = 0.0
 	order_start_time = Time.get_ticks_msec() / 1000.0
 	
+	# Calculate distances for travel timing
+	_calculate_order_distances()
+	
 	# Change state based on order type
 	change_state(MemberState.TRAVELING)
 	
 	Logger.info("Order assigned to gang member", "GangMember", {
 		"member": member_name,
 		"order_type": order_comp.get_order_type(),
-		"order_id": order_entity.id
+		"order_id": order_entity.id,
+		"travel_distance": travel_distance,
+		"return_distance": return_distance
 	})
 	
 	# Emit event
@@ -275,12 +285,16 @@ func _check_order_progress() -> void:
 	
 	match current_state:
 		MemberState.TRAVELING:
-			if elapsed >= order_comp.get_travel_time():
+			# Calculate required travel time based on distance and speed
+			var required_travel_time = order_comp.calculate_travel_time(travel_distance, current_speed)
+			if elapsed >= required_travel_time:
 				# Start working and execute the order
 				Logger.debug("Order progress: Travel complete, starting work", "GangMember", {
 					"member": member_name,
 					"elapsed": elapsed,
-					"required": order_comp.get_travel_time()
+					"required": required_travel_time,
+					"distance": travel_distance,
+					"speed": current_speed
 				})
 				change_state(MemberState.WORKING)
 				order_progress = 0.0
@@ -300,12 +314,16 @@ func _check_order_progress() -> void:
 				order_progress = 0.0
 				
 		MemberState.RETURNING:
-			if elapsed >= order_comp.get_return_time():
+			# Calculate required return time based on distance and speed
+			var required_return_time = order_comp.calculate_travel_time(return_distance, current_speed)
+			if elapsed >= required_return_time:
 				# Fully complete and return to idle
 				Logger.debug("Order progress: Return complete, order finished", "GangMember", {
 					"member": member_name,
 					"elapsed": elapsed,
-					"required": order_comp.get_return_time()
+					"required": required_return_time,
+					"distance": return_distance,
+					"speed": current_speed
 				})
 				current_order = null
 				order_progress = 0.0
@@ -558,6 +576,81 @@ func _get_faction_entity() -> Entity:
 	if Engine.has_singleton("EntityManager"):
 		return Engine.get_singleton("EntityManager").get_entity(faction_id)
 	return null
+
+func _calculate_order_distances() -> void:
+	# Calculate travel and return distances for the current order
+	if not current_order:
+		travel_distance = 0.0
+		return_distance = 0.0
+		return
+	
+	var order_comp = current_order.get_component("OrderComponent")
+	if not order_comp:
+		travel_distance = 0.0
+		return_distance = 0.0
+		return
+	
+	# Get current position (from entity metadata or visual node)
+	var current_pos = _get_current_position()
+	
+	# Get target position based on order type
+	var target_pos = _get_target_position_for_order(order_comp.get_order_type())
+	
+	# Get base position for return distance
+	var base_pos = _get_base_location()
+	
+	# Calculate distances
+	travel_distance = current_pos.distance_to(target_pos)
+	return_distance = target_pos.distance_to(base_pos)
+	
+	Logger.debug("Calculated order distances", "GangMember", {
+		"member": member_name,
+		"travel_distance": travel_distance,
+		"return_distance": return_distance,
+		"current_pos": current_pos,
+		"target_pos": target_pos,
+		"base_pos": base_pos
+	})
+
+func _get_current_position() -> Vector3:
+	# Try to get position from entity metadata first
+	var pos = entity.get_meta("position", Vector3.ZERO)
+	if pos != Vector3.ZERO:
+		return pos
+	
+	# Fallback: try to get from visual node
+	var world_scene = Engine.get_main_loop().get_root().get_node_or_null("World")
+	if world_scene:
+		var member_node_name = "GangMember_" + entity.id
+		var member_node = world_scene.get_node_or_null(member_node_name)
+		if member_node:
+			return member_node.global_position
+	
+	# Final fallback
+	return Vector3.ZERO
+
+func _get_target_position_for_order(order_type: int) -> Vector3:
+	match order_type:
+		Order.OrderType.BUY_SUPPLIES:
+			return _get_shop_location()
+		Order.OrderType.RECRUIT_MEMBERS:
+			return _get_recruitment_location()
+		Order.OrderType.RECRUIT_SPECIFIC_NPC:
+			return _get_target_npc_location()
+		Order.OrderType.PATROL_TERRITORY:
+			return _get_patrol_location()
+		Order.OrderType.DEFEND_TERRITORY:
+			return _get_base_location()  # Defend at base
+		_:
+			return _get_base_location()  # Default to base
+
+func update_speed(new_speed: float) -> void:
+	# Update the character's current speed
+	current_speed = new_speed
+	Logger.debug("Updated gang member speed", "GangMember", {
+		"member": member_name,
+		"new_speed": current_speed
+	})
 
 # Event handlers
 func _on_order_completed(event: EventBus.Event) -> void:
