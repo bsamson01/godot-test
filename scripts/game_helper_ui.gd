@@ -38,12 +38,7 @@ func _ready():
 		event_bus.subscribe(EventBus.EventType.DAY_STARTED, _on_day_started)
 	
 	# Debug: Check if we found the game manager
-	if game_manager:
-		print("GameHelperUI: Found GameManager at: ", game_manager.get_path())
-		print("GameHelperUI: GameManager current_tick: ", game_manager.current_tick)
-	else:
-		print("GameHelperUI: GameManager not found!")
-		print("GameHelperUI: Scene tree structure:")
+	if !game_manager:
 		_print_scene_tree(get_tree().root, 0)
 	
 	# Start a timer to update time display as fallback
@@ -57,17 +52,11 @@ func _ready():
 	await get_tree().create_timer(1.0).timeout
 	if not game_manager:
 		game_manager = _find_game_manager()
-		if game_manager:
-			print("GameHelperUI: Found GameManager on retry at: ", game_manager.get_path())
 	
 	# Try one more time after 2 seconds
 	await get_tree().create_timer(2.0).timeout
 	if not game_manager:
 		game_manager = _find_game_manager()
-		if game_manager:
-			print("GameHelperUI: Found GameManager on second retry at: ", game_manager.get_path())
-		else:
-			print("GameHelperUI: Still no GameManager found after all attempts")
 
 func _setup_ui():
 	# Create main container
@@ -158,10 +147,6 @@ func _on_tick_processed(event: EventBus.Event):
 	# Calculate current day
 	current_day = int(current_tick / 24) + 1
 	
-	# Debug: Print every 10 ticks
-	if current_tick % 10 == 0:
-		print("GameHelperUI: Tick processed - Day: %d, Hour: %d, Time: %s" % [current_day, current_tick % 24, time_of_day])
-	
 	# Update UI
 	_update_time_display()
 
@@ -247,7 +232,6 @@ func _print_scene_tree(node: Node, depth: int):
 	var indent = ""
 	for i in range(depth):
 		indent += "  "
-	print(indent + "- " + node.name + " (" + node.get_class() + ")")
 	
 	for child in node.get_children():
 		_print_scene_tree(child, depth + 1)
@@ -265,9 +249,3 @@ func _fallback_update():
 		time_of_day = new_time_of_day
 		current_day = int(current_tick / 24) + 1
 		_update_time_display()
-		
-		# Debug: Print every 10 ticks
-		if current_tick % 10 == 0:
-			print("GameHelperUI: Fallback update - Day: %d, Hour: %d, Time: %s" % [current_day, current_tick % 24, time_of_day])
-	else:
-		print("GameHelperUI: Fallback update called but no GameManager")

@@ -98,10 +98,10 @@ func _log(level: LogLevel, message: String, category: String, data: Dictionary) 
 	
 	# Console output
 	match level:
-		LogLevel.DEBUG:
-			print(formatted)
-		LogLevel.INFO:
-			print(formatted)
+		# LogLevel.DEBUG:
+		# 	print(formatted)
+		# LogLevel.INFO:
+		# 	print(formatted)
 		LogLevel.WARNING:
 			push_warning(formatted)
 		LogLevel.ERROR:
