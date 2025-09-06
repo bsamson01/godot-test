@@ -131,6 +131,12 @@ func _think() -> void:
 		"goals_count": goals.size(),
 		"goals": goals
 	})
+
+	print("Commander AI goals evaluated", "AI", {
+		"commander": entity.id,
+		"goals_count": goals.size(),
+		"goals": goals
+	})
 	
 	# Select best goal
 	var best_goal = _select_goal(goals)
@@ -157,40 +163,46 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	var supply_consumption = world_state.get("supply_consumption", 1.0)
 	
 	# Critical supply maintenance
-	if supplies < CRITICAL_SUPPLIES:
-		goals.append({
-			"name": "emergency_supplies",
-			"priority": 100.0,
-			"action": "buy_supplies"
-		})
+	# if supplies < CRITICAL_SUPPLIES:
+	# 	goals.append({
+	# 		"name": "emergency_supplies",
+	# 		"priority": 100.0,
+	# 		"action": "buy_supplies"
+	# 	})
 	
 	# Defense against threats
-	if threats.size() > 0 and supplies < 300:
-		goals.append({
-			"name": "defend_territory",
-			"priority": 90.0,
-			"action": "defend"
-		})
+	# if threats.size() > 0 and supplies < 300:
+	# 	goals.append({
+	# 		"name": "defend_territory",
+	# 		"priority": 90.0,
+	# 		"action": "defend"
+	# 	})
 	
 	# Regular supply maintenance
-	var days_of_supplies = supplies / max(supply_consumption, 1.0)
-	if days_of_supplies < 5 and funds > MIN_FUNDS_FOR_OPERATIONS:
-		goals.append({
-			"name": "maintain_supplies",
-			"priority": 80.0 * goal_weights.maintain_supplies,
-			"action": "buy_supplies"
-		})
+	# var days_of_supplies = supplies / max(supply_consumption, 1.0)
+	# if days_of_supplies < 5 and funds > MIN_FUNDS_FOR_OPERATIONS:
+	# 	goals.append({
+	# 		"name": "maintain_supplies",
+	# 		"priority": 80.0 * goal_weights.maintain_supplies,
+	# 		"action": "buy_supplies"
+	# 	})
 	
 	# Intelligence gathering
-	if funds > MIN_FUNDS_FOR_OPERATIONS and intel.size() < threats.size():
-		goals.append({
-			"name": "gather_intel",
-			"priority": 60.0 * goal_weights.gather_intel,
-			"action": "spy"
-		})
+	# if funds > MIN_FUNDS_FOR_OPERATIONS and intel.size() < threats.size():
+	# 	goals.append({
+	# 		"name": "gather_intel",
+	# 		"priority": 60.0 * goal_weights.gather_intel,
+	# 		"action": "spy"
+	# 	})
 	
 	# Recruitment (only if NPCs are available)
-	if member_count < 5 and funds > 2000 and _has_available_npcs():
+	print("Commander AI has available NPCs", "AI", {
+		"commander": entity.id,
+		"member_count": member_count,
+		"funds": funds,
+		"has_available_npcs": _has_available_npcs()
+	})
+	if member_count < 5 and funds > 2 and _has_available_npcs():
 		goals.append({
 			"name": "recruit_members",
 			"priority": 70.0 * goal_weights.recruit_members,
@@ -198,28 +210,28 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		})
 	
 	# Expansion
-	if funds > 1000 and member_count >= 5:
-		goals.append({
-			"name": "expand_territory",
-			"priority": 50.0 * goal_weights.expand_territory,
-			"action": "attack"
-		})
+	# if funds > 1000 and member_count >= 5:
+	# 	goals.append({
+	# 		"name": "expand_territory",
+	# 		"priority": 50.0 * goal_weights.expand_territory,
+	# 		"action": "attack"
+	# 	})
 	
 	# Diplomacy
-	if opportunities.size() > 0:
-		goals.append({
-			"name": "improve_relations",
-			"priority": 40.0 * goal_weights.improve_relations,
-			"action": "negotiate"
-		})
+	# if opportunities.size() > 0:
+	# 	goals.append({
+	# 		"name": "improve_relations",
+	# 		"priority": 40.0 * goal_weights.improve_relations,
+	# 		"action": "negotiate"
+	# 	})
 	
 	# Patrol territories
-	if territory_count > 0 and available_members > 0:
-		goals.append({
-			"name": "patrol_territories",
-			"priority": 30.0,
-			"action": "patrol"
-		})
+	# if territory_count > 0 and available_members > 0:
+	# 	goals.append({
+	# 		"name": "patrol_territories",
+	# 		"priority": 30.0,
+	# 		"action": "patrol"
+	# 	})
 	
 	return goals
 
@@ -250,7 +262,10 @@ func _execute_goal(world_state: Dictionary) -> void:
 				order_manager.create_order(Order.OrderType.SPY, faction_id, {"target_faction": target.faction_id})
 		
 		"recruit_members":
-			order_manager.create_order(Order.OrderType.RECRUIT_MEMBERS, faction_id, {})
+			# Find a specific recruitable NPC
+			var target_npc = _get_recruitable_npc()
+			if target_npc:
+				order_manager.create_order(Order.OrderType.RECRUIT_SPECIFIC_NPC, faction_id, {"target_id": target_npc.id})
 		
 		"expand_territory":
 			# Find weakest hostile faction
@@ -348,17 +363,28 @@ func _issue_order_old(order_type: Order.OrderType, target_id: String = "", param
 	return true
 
 func _assign_orders_to_members() -> void:
-	# Get the gang member component to access faction_id
+	# Use OrderManager to assign orders from faction queue
+	if not Engine.has_singleton("OrderManager"):
+		Logger.error("OrderManager not available for order assignment", "CommanderAI")
+		return
+	
+	var order_manager = Engine.get_singleton("OrderManager")
 	var member_comp = entity.get_component("GangMemberComponent")
 	if not member_comp:
 		return
 	
-	var entity_manager = Engine.get_singleton("EntityManager") if Engine.has_singleton("EntityManager") else null
+	var faction_id = member_comp.faction_id
+	var available_orders = order_manager.get_available_orders(faction_id)
+	
+	if available_orders.is_empty():
+		return
+	
+	# Get available members
+	var entity_manager = Engine.get_singleton("EntityManager")
 	if not entity_manager:
 		return
 	
-	# Find the faction entity using the faction_id
-	var faction_entity = entity_manager.get_entity(member_comp.faction_id)
+	var faction_entity = entity_manager.get_entity(faction_id)
 	if not faction_entity:
 		return
 	
@@ -366,7 +392,6 @@ func _assign_orders_to_members() -> void:
 	if not faction_comp:
 		return
 	
-	# Get available members
 	var available_members: Array = []
 	for member_entity in faction_comp.get_members():
 		var member_comp_available = member_entity.get_component("GangMemberComponent")
@@ -376,49 +401,36 @@ func _assign_orders_to_members() -> void:
 	if available_members.is_empty():
 		return
 	
-	# Sort orders by priority
-	order_queue.sort_custom(func(a, b):
-		var a_comp = a.get_component("OrderComponent")
-		var b_comp = b.get_component("OrderComponent")
-		return a_comp.priority > b_comp.priority if a_comp and b_comp else false
-	)
+	# Try to assign orders to available members
+	Logger.info("Commander AI attempting to assign orders", "CommanderAI", {
+		"available_orders": available_orders.size(),
+		"available_members": available_members.size()
+	})
 	
-	# Assign orders
-	var assigned_orders: Array = []
-	
-	for order_entity in order_queue:
+	for order_entity in available_orders:
 		if available_members.is_empty():
 			break
 		
+		# Find best member for this order
 		var order_comp = order_entity.get_component("OrderComponent")
-		if not order_comp or order_comp.status != "pending":
+		if not order_comp:
 			continue
 		
-		# Special handling for supply orders - only one at a time
-		if order_comp.get_order_type() == Order.OrderType.BUY_SUPPLIES:
-			var supply_order_active = false
-			for member in faction_comp.get_members():
-				var m_comp = member.get_component("GangMemberComponent")
-				if m_comp and m_comp.current_order:
-					var o_comp = m_comp.current_order.get_component("OrderComponent")
-					if o_comp and o_comp.get_order_type() == Order.OrderType.BUY_SUPPLIES:
-						supply_order_active = true
-						break
-			
-			if supply_order_active:
-				continue
-		
-		# Find best member for this order
 		var best_member = _select_member_for_order(available_members, order_comp)
 		if best_member:
-			var member_comp_assign = best_member.get_component("GangMemberComponent")
-			if member_comp_assign.assign_order(order_entity):
+			# Use OrderManager to assign the order
+			if order_manager.assign_order_to_member(order_entity, best_member):
 				available_members.erase(best_member)
-				assigned_orders.append(order_entity)
-	
-	# Remove assigned orders from queue
-	for order in assigned_orders:
-		order_queue.erase(order)
+				Logger.info("Order assigned via OrderManager", "CommanderAI", {
+					"order_id": order_entity.id,
+					"member": best_member.get_component("GangMemberComponent").member_name,
+					"order_type": Order.OrderType.keys()[order_comp.get_order_type()]
+				})
+			else:
+				Logger.warning("Failed to assign order to member", "CommanderAI", {
+					"order_id": order_entity.id,
+					"member": best_member.get_component("GangMemberComponent").member_name
+				})
 
 func _select_member_for_order(members: Array, order_comp: OrderComponent) -> Entity:
 	# Select best member based on order type and member attributes
@@ -495,9 +507,30 @@ func _has_available_npcs() -> bool:
 		var entity_manager = Engine.get_singleton("EntityManager")
 		var npcs = entity_manager.get_entities_with_component("NPCComponent")
 		
+		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))  # Correct day calculation
+
 		for npc_entity in npcs:
 			var npc_comp = npc_entity.get_component("NPCComponent")
-			if npc_comp and npc_comp.can_be_recruited(int(Time.get_ticks_msec() / 1000.0 / 60.0)):
+			if npc_comp and npc_comp.can_be_recruited(current_day):
 				return true
 	
 	return false
+
+func _get_recruitable_npc() -> Entity:
+	# Get a random recruitable NPC
+	if Engine.has_singleton("EntityManager"):
+		var entity_manager = Engine.get_singleton("EntityManager")
+		var npcs = entity_manager.get_entities_with_component("NPCComponent")
+		var recruitable_npcs = []
+		
+		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))
+		
+		for npc_entity in npcs:
+			var npc_comp = npc_entity.get_component("NPCComponent")
+			if npc_comp and npc_comp.can_be_recruited(current_day):
+				recruitable_npcs.append(npc_entity)
+		
+		if recruitable_npcs.size() > 0:
+			return recruitable_npcs[randi() % recruitable_npcs.size()]
+	
+	return null

@@ -2,7 +2,7 @@ extends Node
 class_name OrderLogic
 
 # Check if an order can be triggered right now
-static func can_trigger_order(order_type: int, _commander_ai: CommanderAI, game_state: Dictionary) -> bool:
+static func can_trigger_order(order_type: int, game_state: Dictionary) -> bool:
 	match order_type:
 		Order.OrderType.BUY_SUPPLIES:
 			# Always allow buying supplies if funds > 100 (example)
@@ -17,7 +17,7 @@ static func can_trigger_order(order_type: int, _commander_ai: CommanderAI, game_
 			return false
 
 # Check if an existing queued order should stay or be dropped
-static func should_keep_order(order: Order, _commander_ai: CommanderAI, game_state: Dictionary) -> bool:
+static func should_keep_order(order: Order, game_state: Dictionary) -> bool:
 	match order.order_type:
 		Order.OrderType.BUY_SUPPLIES:
 			# Remove if funds dropped below 50

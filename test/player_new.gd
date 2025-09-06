@@ -23,6 +23,13 @@ func _ready():
 	# Create collision avoidance component
 	avoidance_component = CollisionAvoidanceComponent.new()
 	add_child(avoidance_component)
+	
+	# Initialize behavior tree blackboard with entity_id
+	if has_node("BTPlayer"):
+		var bt_player = get_node("BTPlayer")
+		if bt_player and bt_player.blackboard:
+			bt_player.blackboard.set_var("entity_id", member_id)
+			bt_player.blackboard.set_var("agent", self)
 
 func _physics_process(delta: float) -> void:
 	# Add the gravity.
@@ -62,4 +69,16 @@ func updateTargetLocation(target: Vector3):
 
 func updateLabel(updateCopy: String):
 	childLabel.text = updateCopy
+
+# Method for behavior tree to set movement target
+func set_movement_target(target_position: Vector3):
+	updateTargetLocation(target_position)
+
+# Method for behavior tree to check if movement is complete
+func is_movement_complete() -> bool:
+	return nav_agent.is_navigation_finished()
+
+# Method for behavior tree to get current position
+func get_current_position() -> Vector3:
+	return global_position
 	

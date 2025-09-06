@@ -54,7 +54,7 @@ func create_order(order_type: Order.OrderType, faction_id: String, data: Diction
 			}
 		)
 	
-	Logger.info("Order created", "OrderManager", {
+	Logger.warning("Order created", "OrderManager", {
 		"order_id": order_entity.id,
 		"faction_id": faction_id,
 		"order_type": Order.OrderType.keys()[order_type]
@@ -74,7 +74,8 @@ func assign_order_to_member(order_entity: Entity, member_entity: Entity) -> bool
 	if not member_comp.is_available():
 		Logger.warning("Member not available for order assignment", "OrderManager", {
 			"member": member_comp.member_name,
-			"state": member_comp.current_state
+			"state": member_comp.current_state,
+			"order_type": Order.OrderType.keys()[order_comp.get_order_type()]
 		})
 		return false
 	

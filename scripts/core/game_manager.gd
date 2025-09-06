@@ -255,7 +255,7 @@ func _process_game_tick() -> void:
 		
 		# Generate new NPCs every 10 days
 		var current_day = int(current_tick / 24.0)
-		if current_day > 0 and current_day % 10 == 0:
+		if current_day > 0 and current_day % 2 == 0:
 			_generate_npc()
 		
 		event_bus.emit_event(EventBus.EventType.DAY_STARTED, {"day": current_tick / 24.0})

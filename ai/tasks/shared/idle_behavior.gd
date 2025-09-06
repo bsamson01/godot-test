@@ -22,17 +22,24 @@ func _tick(_delta: float) -> Status:
 	
 	# Check if member is available for new orders
 	if member_comp.is_available():
-		# Try to get a new order from OrderManager
-		if Engine.has_singleton("OrderManager"):
-			var order_manager = Engine.get_singleton("OrderManager")
-			var available_orders = order_manager.get_available_orders(member_comp.faction_id)
+		# Try to get a new order from OrderManager (only occasionally to avoid spam)
+		var current_time = Time.get_ticks_msec() / 1000.0
+		var last_order_check = blackboard.get_var("last_order_check", 0.0)
+		
+		# Only check for new orders every 5 seconds
+		if current_time - last_order_check > 5.0:
+			blackboard.set_var("last_order_check", current_time)
 			
-			# Try to assign an order
-			for order_entity in available_orders:
-				if order_manager.assign_order_to_member(order_entity, entity):
-					blackboard.set_var("has_order", true)
-					blackboard.set_var("current_action", "assigned_new_order")
-					return SUCCESS
+			if Engine.has_singleton("OrderManager"):
+				var order_manager = Engine.get_singleton("OrderManager")
+				var available_orders = order_manager.get_available_orders(member_comp.faction_id)
+				
+				# Try to assign an order
+				for order_entity in available_orders:
+					if order_manager.assign_order_to_member(order_entity, entity):
+						blackboard.set_var("has_order", true)
+						blackboard.set_var("current_action", "assigned_new_order")
+						return SUCCESS
 		
 		# No orders available, just idle
 		blackboard.set_var("current_action", "idle")

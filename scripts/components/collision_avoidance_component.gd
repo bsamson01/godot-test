@@ -86,6 +86,10 @@ func _update_nearby_characters(current_position: Vector3):
 		if character == get_parent():
 			continue  # Skip self
 		
+		# Check if this character should be considered for collision avoidance
+		if not _should_avoid_character(character):
+			continue
+		
 		var distance = current_position.distance_to(character.global_position)
 		if distance <= avoidance_radius * 2:  # Check within double the avoidance radius
 			nearby_characters.append({
@@ -161,6 +165,16 @@ func set_separation_strength(strength: float):
 	separation_strength = strength
 
 func _check_stuck_condition(current_position: Vector3, current_time: float):
+	# Don't check for stuck condition if we're intentionally idle
+	if _is_intentionally_idle():
+		# Reset stuck state if we're intentionally idle
+		if is_stuck or bypass_active or recovery_active:
+			is_stuck = false
+			bypass_active = false
+			bypass_direction = Vector3.ZERO
+			recovery_active = false
+		return
+	
 	# Check if we should update position tracking
 	if current_time - last_position_check >= position_check_interval:
 		# Check if we've moved significantly
@@ -288,3 +302,51 @@ func _calculate_recovery_force(_current_position: Vector3, _current_velocity: Ve
 	recovery_force *= force_multiplier
 	
 	return recovery_force
+
+func _should_avoid_character(character: Node) -> bool:
+	# Don't avoid characters that are idle or not moving
+	# Check if the character has a gang member component with state information
+	if character.has_method("get") and character.get("member_id"):
+		# This is a visual character node, check if it has a corresponding ECS entity
+		var member_id = character.get("member_id")
+		if Engine.has_singleton("EntityManager"):
+			var entity_manager = Engine.get_singleton("EntityManager")
+			var member_entity = entity_manager.get_entity(member_id)
+			if member_entity:
+				var member_comp = member_entity.get_component("GangMemberComponent")
+				if member_comp:
+					# Only avoid characters that are actively moving (not idle)
+					return member_comp.current_state != GangMemberComponent.MemberState.IDLE
+	
+	# Fallback: check if character is moving by looking at velocity
+	if character.has_method("get") and character.get("base_velocity"):
+		var base_velocity = character.get("base_velocity")
+		return base_velocity.length() > 0.1  # Only avoid if moving
+	
+	# Default: avoid all characters if we can't determine their state
+	return true
+
+func _is_intentionally_idle() -> bool:
+	# Check if this character is intentionally idle (not stuck)
+	var parent_node = get_parent()
+	if not parent_node:
+		return false
+	
+	# Check if we have a member_id and can check the ECS state
+	if parent_node.has_method("get") and parent_node.get("member_id"):
+		var member_id = parent_node.get("member_id")
+		if Engine.has_singleton("EntityManager"):
+			var entity_manager = Engine.get_singleton("EntityManager")
+			var member_entity = entity_manager.get_entity(member_id)
+			if member_entity:
+				var member_comp = member_entity.get_component("GangMemberComponent")
+				if member_comp:
+					# We're intentionally idle if we're in IDLE state
+					return member_comp.current_state == GangMemberComponent.MemberState.IDLE
+	
+	# Fallback: check if we have no base velocity (not moving)
+	if parent_node.has_method("get") and parent_node.get("base_velocity"):
+		var base_velocity = parent_node.get("base_velocity")
+		return base_velocity.length() < 0.1
+	
+	return false

@@ -1,29 +1,7 @@
-# check_under_attack.gd - Check if gang member is under attack
+# check_under_attack.gd - Check if character is under attack
 extends BTCondition
 
 func _tick(_delta: float) -> Status:
-	var entity_id = blackboard.get_var("entity_id")
-	if not entity_id:
-		return FAILURE
-	
-	# Get entity from EntityManager
-	var entity_manager = Engine.get_singleton("EntityManager")
-	if not entity_manager:
-		return FAILURE
-	
-	var entity = entity_manager.get_entity(entity_id)
-	if not entity:
-		return FAILURE
-	
-	# Get gang member component
-	var member_comp = entity.get_component("GangMemberComponent")
-	if not member_comp:
-		return FAILURE
-	
-	# For now, we'll consider low loyalty as being "under attack"
-	# In a real implementation, this would check for nearby enemies
-	var is_under_attack = member_comp.loyalty < 50.0
-	
-	blackboard.set_var("is_under_attack", is_under_attack)
-	
-	return SUCCESS if is_under_attack else FAILURE
+	# For now, no attack detection is implemented
+	# This can be extended later when combat system is added
+	return FAILURE

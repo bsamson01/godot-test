@@ -17,7 +17,7 @@ static func create_behavior_tree() -> BTTask:
 	# Priority 2: Execute orders
 	var order_sequence = BTSequence.new()
 	order_sequence.add_child(_create_check_for_order())
-	order_sequence.add_child(_create_execute_order())
+	order_sequence.add_child(_create_select_order_behavior())
 	root.add_child(order_sequence)
 	
 	# Priority 3: Idle behavior
@@ -55,9 +55,9 @@ static func _create_check_for_order() -> BTCondition:
 	check.set_script(preload("res://ai/tasks/shared/check_for_order.gd"))
 	return check
 
-static func _create_execute_order() -> BTAction:
+static func _create_select_order_behavior() -> BTAction:
 	var action = BTAction.new()
-	action.set_script(preload("res://ai/tasks/shared/execute_order.gd"))
+	action.set_script(preload("res://ai/tasks/shared/select_order_behavior.gd"))
 	return action
 
 static func _create_idle_behavior() -> BTAction:

@@ -1,0 +1,9 @@
+[gd_resource type="BehaviorTree" load_steps=2 format=3 uid="uid://e1nvngupq4eg"]
+
+[ext_resource type="BehaviorTree" uid="uid://bwgfsexd4af4o" path="res://ai/behaviors/master_ai_behavior.gd" id="1_master"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_1"]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_1")
+root_task = ExtResource("1_master")

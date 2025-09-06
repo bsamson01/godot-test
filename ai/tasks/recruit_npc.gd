@@ -1,120 +1,72 @@
-# execute_order.gd - Execute the current order
+# recruit_npc.gd - Recruit a specific NPC task
 extends BTAction
 
-func _tick(_delta: float) -> Status:
-	var entity_id = blackboard.get_var("entity_id")
-	if not entity_id:
-		return FAILURE
-	
-	# Get entity from EntityManager
-	var entity_manager = Engine.get_singleton("EntityManager")
-	if not entity_manager:
-		return FAILURE
-	
-	var entity = entity_manager.get_entity(entity_id)
-	if not entity:
-		return FAILURE
-	
-	# Get gang member component
-	var member_comp = entity.get_component("GangMemberComponent")
-	if not member_comp or not member_comp.current_order:
-		return FAILURE
-	
-	# Update blackboard with current state
-	blackboard.set_var("member_state", member_comp.current_state)
-	blackboard.set_var("order_progress", member_comp.order_progress)
-	
-	# Check for specific order types that need special handling
-	var order_comp = member_comp.current_order.get_component("OrderComponent")
-	if order_comp and order_comp.get_order_type() == Order.OrderType.RECRUIT_SPECIFIC_NPC:
-		return _handle_recruit_specific_npc_order(_delta)
-	
-	# The actual order execution is handled by the GangMemberComponent
-	# This task just reports the status
-	
-	match member_comp.current_state:
-		GangMemberComponent.MemberState.TRAVELING:
-			blackboard.set_var("current_action", "traveling")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.WORKING:
-			blackboard.set_var("current_action", "working")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.RETURNING:
-			blackboard.set_var("current_action", "returning")
-			return RUNNING
-		
-		GangMemberComponent.MemberState.IDLE:
-			# Order completed
-			blackboard.set_var("current_action", "idle")
-			return SUCCESS
-		
-		_:
-			return RUNNING
+var recruit_state: String = "find_npc"
+var target_npc_entity: Entity = null
+var chat_timer: float = 0.0
+var base_location: Vector3 = Vector3.ZERO
 
-func _handle_recruit_specific_npc_order(_delta: float) -> Status:
+func _tick(delta: float) -> Status:
 	# Get the target NPC ID from the order
-	var order_comp = blackboard.get_var("current_order", null)
-	if not order_comp:
-		agent.updateLabel('No current order')
-		return FAILURE
-	
-	var order_data = order_comp.get_component("OrderComponent")
-	if not order_data:
-		agent.updateLabel('No order component')
-		return FAILURE
-	
-	var target_npc_id = order_data.get_target_id()
+	var target_npc_id = _get_target_npc_id()
 	if target_npc_id == "":
 		agent.updateLabel('No target NPC ID')
 		return FAILURE
 	
-	# Store target NPC ID in blackboard for other methods
-	blackboard.set_var("target_npc_id", target_npc_id)
-	
-	# Get the current state from blackboard
-	var current_state = blackboard.get_var("recruit_state", "find_npc")
-	
-	match current_state:
+	# Execute recruitment based on current state
+	match recruit_state:
 		"find_npc":
 			return _find_target_npc()
 		"approach_npc":
-			return _approach_npc(_delta)
+			return _approach_npc(delta)
 		"chat_with_npc":
-			return _chat_with_npc(_delta)
+			return _chat_with_npc(delta)
 		"return_to_base":
-			return _return_to_base(_delta)
+			return _return_to_base(delta)
 		_:
 			return FAILURE
 
+func _get_target_npc_id() -> String:
+	# Try to get from blackboard first
+	var target_id = blackboard.get_var("target_npc_id", "")
+	if target_id != "":
+		return target_id
+	
+	# Get from current order
+	var current_order = blackboard.get_var("current_order", null)
+	if current_order:
+		var order_comp = current_order.get_component("OrderComponent")
+		if order_comp:
+			return order_comp.get_target_id()
+	
+	return ""
+
 func _find_target_npc() -> Status:
-	var target_npc_id = blackboard.get_var("target_npc_id", "")
+	var target_npc_id = _get_target_npc_id()
 	
 	# Find the NPC entity
 	if Engine.has_singleton("EntityManager"):
 		var entity_manager = Engine.get_singleton("EntityManager")
-		var npc_entity = entity_manager.get_entity(target_npc_id)
+		target_npc_entity = entity_manager.get_entity(target_npc_id)
 		
-		if not npc_entity:
+		if not target_npc_entity:
 			agent.updateLabel('Target NPC not found')
 			return FAILURE
 		
-		var npc_comp = npc_entity.get_component("NPCComponent")
+		var npc_comp = target_npc_entity.get_component("NPCComponent")
 		if not npc_comp:
 			agent.updateLabel('Target has no NPC component')
 			return FAILURE
 		
 		# Check if NPC can be recruited
-		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))  # Rough day calculation
+		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))
 		if not npc_comp.can_be_recruited(current_day):
 			agent.updateLabel('NPC cannot be recruited')
 			return FAILURE
 		
 		# Set target position and move to approach phase
 		blackboard.set_var("pos", npc_comp.location)
-		blackboard.set_var("target_npc_entity", npc_entity)
-		blackboard.set_var("recruit_state", "approach_npc")
+		recruit_state = "approach_npc"
 		agent.updateLabel('Found target NPC: ' + npc_comp.npc_name)
 		return SUCCESS
 	
@@ -122,7 +74,6 @@ func _find_target_npc() -> Status:
 	return FAILURE
 
 func _approach_npc(_delta: float) -> Status:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if not target_npc_entity:
 		return FAILURE
 	
@@ -141,22 +92,19 @@ func _approach_npc(_delta: float) -> Status:
 	var distance_to_npc = current_pos.distance_to(npc_comp.location)
 	
 	if distance_to_npc < 3.0:  # Close enough to chat
-		blackboard.set_var("recruit_state", "chat_with_npc")
-		blackboard.set_var("chat_timer", 0.0)
+		recruit_state = "chat_with_npc"
+		chat_timer = 0.0
 		agent.updateLabel('Chatting with NPC')
 		return SUCCESS
 	
 	agent.updateLabel('Approaching NPC (%.1fm)' % distance_to_npc)
 	return RUNNING
 
-func _chat_with_npc(_delta: float) -> Status:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
+func _chat_with_npc(delta: float) -> Status:
 	if not target_npc_entity:
 		return FAILURE
 	
-	var chat_timer = blackboard.get_var("chat_timer", 0.0)
-	chat_timer += _delta
-	blackboard.set_var("chat_timer", chat_timer)
+	chat_timer += delta
 	
 	# Update NPC position while chatting (they might still be moving)
 	var npc_comp = target_npc_entity.get_component("NPCComponent")
@@ -171,7 +119,7 @@ func _chat_with_npc(_delta: float) -> Status:
 		
 		if success:
 			# NPC is now following us
-			blackboard.set_var("recruit_state", "return_to_base")
+			recruit_state = "return_to_base"
 			agent.updateLabel('NPC recruited, returning to base')
 			
 			# Set NPC to follow the gang member
@@ -189,18 +137,19 @@ func _chat_with_npc(_delta: float) -> Status:
 	
 	# Show progress
 	var progress = int((chat_timer / 6.0) * 100)
-	agent.updateLabel('Chatting with NPC (' + str(progress) + '%)')
+	agent.updateLabel('Chatting with NPC (%d%%)' % progress)
 	return RUNNING
 
 func _return_to_base(_delta: float) -> Status:
-	var base_pos = blackboard.get_var("pos", Vector3.ZERO)
+	if base_location == Vector3.ZERO:
+		_get_base_location()
 	
 	# Use the movement system
-	agent.set_movement_target(base_pos)
+	agent.set_movement_target(base_location)
 	
 	# Check if we've reached the base
 	var current_pos = agent.get_current_position()
-	var distance_to_base = current_pos.distance_to(base_pos)
+	var distance_to_base = current_pos.distance_to(base_location)
 	
 	if distance_to_base < 2.0:  # Close enough to base
 		# Complete the recruitment
@@ -209,7 +158,6 @@ func _return_to_base(_delta: float) -> Status:
 		return SUCCESS
 	
 	# Update NPC position to follow us
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if target_npc_entity:
 		var npc_comp = target_npc_entity.get_component("NPCComponent")
 		if npc_comp:
@@ -232,10 +180,10 @@ func _get_base_location() -> void:
 					if faction_entity:
 						var faction_comp = faction_entity.get_component("FactionComponent")
 						if faction_comp:
-							blackboard.set_var("pos", faction_comp.base_location)
+							base_location = faction_comp.base_location
+							blackboard.set_var("pos", base_location)
 
 func _complete_recruitment() -> void:
-	var target_npc_entity = blackboard.get_var("target_npc_entity", null)
 	if not target_npc_entity:
 		return
 	
