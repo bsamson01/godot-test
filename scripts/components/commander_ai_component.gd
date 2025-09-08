@@ -7,6 +7,20 @@ var order_queue: Array = []
 var max_queue_size: int = 10
 var orders_issued_today: int = 0
 
+# Goal tracking
+var completed_goals: Dictionary = {} # goal_name -> completion_time
+var goal_cooldowns: Dictionary = {
+	"emergency_supplies": 30.0,  # 30 seconds before re-evaluating
+	"maintain_supplies": 60.0,   # 60 seconds
+	"recruit_members": 120.0,    # 2 minutes
+	"defend_territory": 45.0,    # 45 seconds
+	"gather_intel": 180.0,       # 3 minutes
+	"expand_territory": 300.0,   # 5 minutes
+	"improve_relations": 240.0,  # 4 minutes
+	"patrol_territories": 90.0   # 90 seconds
+}
+var pending_orders_by_goal: Dictionary = {} # goal_name -> order_count
+
 # Strategic thresholds
 const MIN_FUNDS_FOR_OPERATIONS = 500.0
 const MIN_SUPPLIES_FOR_OPERATIONS = 200.0
@@ -28,6 +42,11 @@ func get_component_name() -> String:
 func _ready():
 	ai_type = "commander"
 	decision_interval = 5.0  # Commanders think less frequently but more deeply
+	
+	# Subscribe to order completion events to track goal progress
+	if Engine.has_singleton("EventBus"):
+		var event_bus = Engine.get_singleton("EventBus")
+		event_bus.subscribe(EventBus.EventType.ORDER_COMPLETED, _on_order_completed_event)
 
 func _update_cached_state() -> void:
 	# Get the gang member component to access faction_id
@@ -141,12 +160,22 @@ func _think() -> void:
 	# Select best goal
 	var best_goal = _select_goal(goals)
 	
+	print("COMMANDER: Goal selection - best_goal=", best_goal, " current_goal=", current_goal)
+	
 	if best_goal and best_goal.name != current_goal:
+		print("COMMANDER: Setting new goal from ", current_goal, " to ", best_goal.name)
 		_set_goal(best_goal)
+	else:
+		print("COMMANDER: No goal change needed")
 	
 	# Execute current goal
+	print("COMMANDER: Checking current goal - current_goal=", current_goal, " has_goal=", current_goal != "")
+	
 	if current_goal:
+		print("COMMANDER: Executing goal - ", current_goal)
 		_execute_goal(world_state)
+	else:
+		print("COMMANDER: No current goal to execute!")
 
 func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	var goals: Array[Dictionary] = []
@@ -155,20 +184,20 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	var supplies = world_state.get("supplies", 0.0)
 	var funds = world_state.get("funds", 0.0)
 	var member_count = world_state.get("member_count", 0)
-	var territory_count = world_state.get("territory_count", 0)
-	var available_members = world_state.get("available_members", 0)
-	var threats = world_state.get("threats", [])
-	var opportunities = world_state.get("opportunities", [])
-	var intel = world_state.get("intel", {})
+	var _territory_count = world_state.get("territory_count", 0)
+	var _available_members = world_state.get("available_members", 0)
+	var _threats = world_state.get("threats", [])
+	var _opportunities = world_state.get("opportunities", [])
+	var _intel = world_state.get("intel", {})
 	var supply_consumption = world_state.get("supply_consumption", 1.0)
-	
-	# Critical supply maintenance
-	# if supplies < CRITICAL_SUPPLIES:
-	# 	goals.append({
-	# 		"name": "emergency_supplies",
-	# 		"priority": 100.0,
-	# 		"action": "buy_supplies"
-	# 	})
+
+	# Critical supply emergency - only if supplies are critically low AND not recently completed
+	if supplies < CRITICAL_SUPPLIES and _can_execute_goal("emergency_supplies"):
+		goals.append({
+			"name": "emergency_supplies",
+			"priority": 100.0,
+			"action": "buy_supplies"
+		})
 	
 	# Defense against threats
 	# if threats.size() > 0 and supplies < 300:
@@ -179,13 +208,13 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	# 	})
 	
 	# Regular supply maintenance
-	# var days_of_supplies = supplies / max(supply_consumption, 1.0)
-	# if days_of_supplies < 5 and funds > MIN_FUNDS_FOR_OPERATIONS:
-	# 	goals.append({
-	# 		"name": "maintain_supplies",
-	# 		"priority": 80.0 * goal_weights.maintain_supplies,
-	# 		"action": "buy_supplies"
-	# 	})
+	var days_of_supplies = supplies / max(supply_consumption, 1.0)
+	if days_of_supplies < 5 and funds > MIN_FUNDS_FOR_OPERATIONS and _can_execute_goal("maintain_supplies"):
+		goals.append({
+			"name": "maintain_supplies",
+			"priority": 80.0 * goal_weights.maintain_supplies,
+			"action": "buy_supplies"
+		})
 	
 	# Intelligence gathering
 	# if funds > MIN_FUNDS_FOR_OPERATIONS and intel.size() < threats.size():
@@ -202,12 +231,12 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 		"funds": funds,
 		"has_available_npcs": _has_available_npcs()
 	})
-	if member_count < 5 and funds > 2 and _has_available_npcs():
-		goals.append({
-			"name": "recruit_members",
-			"priority": 70.0 * goal_weights.recruit_members,
-			"action": "recruit"
-		})
+	# if member_count < 5 and funds > 2 and _has_available_npcs() and _can_execute_goal("recruit_members"):
+	# 	goals.append({
+	# 		"name": "recruit_members",
+	# 		"priority": 70.0 * goal_weights.recruit_members,
+	# 		"action": "recruit"
+	# 	})
 	
 	# Expansion
 	# if funds > 1000 and member_count >= 5:
@@ -226,46 +255,70 @@ func _evaluate_goals(world_state: Dictionary) -> Array[Dictionary]:
 	# 	})
 	
 	# Patrol territories
-	# if territory_count > 0 and available_members > 0:
-	# 	goals.append({
-	# 		"name": "patrol_territories",
-	# 		"priority": 30.0,
-	# 		"action": "patrol"
-	# 	})
+	if _territory_count > 0 and _available_members > 0:
+		goals.append({
+			"name": "patrol_territories",
+			"priority": 30.0,
+			"action": "patrol"
+		})
 	
 	return goals
 
 func _execute_goal(world_state: Dictionary) -> void:
 	# Execute the current goal by creating appropriate orders
+	print("COMMANDER: _execute_goal called with goal=", current_goal)
+	
+	# Check if we already have pending orders for this goal
+	var pending_count = pending_orders_by_goal.get(current_goal, 0)
+	if pending_count > 0:
+		print("COMMANDER: Goal ", current_goal, " already has ", pending_count, " pending orders. Skipping execution.")
+		return
+	
 	if not Engine.has_singleton("OrderManager"):
-		Logger.error("OrderManager not available", "CommanderAI")
+		print("COMMANDER: ERROR - OrderManager not available!")
 		return
 	
 	var order_manager = Engine.get_singleton("OrderManager")
+	print("COMMANDER: Got OrderManager")
+	
 	var member_comp = entity.get_component("GangMemberComponent")
 	if not member_comp:
-		Logger.error("Commander AI missing gang member component", "CommanderAI")
+		print("COMMANDER: ERROR - Missing gang member component!")
 		return
 	
 	var faction_id = member_comp.faction_id
+	print("COMMANDER: Faction ID = ", faction_id)
 	
 	match current_goal:
 		"emergency_supplies", "maintain_supplies":
+			print("COMMANDER: Creating BUY_SUPPLIES order for faction ", faction_id)
 			order_manager.create_order(Order.OrderType.BUY_SUPPLIES, faction_id, {"amount": 1000.0})
+			_track_order_for_goal(current_goal)
+			print("COMMANDER: Order creation call completed")
+			
+			# Try to assign orders to available members
+			print("COMMANDER: Attempting to assign orders to members")
+			_assign_orders_to_members()
 		
 		"defend_territory":
 			order_manager.create_order(Order.OrderType.DEFEND_TERRITORY, faction_id, {})
+			_track_order_for_goal(current_goal)
+			_assign_orders_to_members()
 		
 		"gather_intel":
 			if world_state.threats.size() > 0:
 				var target = world_state.threats[0]
 				order_manager.create_order(Order.OrderType.SPY, faction_id, {"target_faction": target.faction_id})
+				_track_order_for_goal(current_goal)
+				_assign_orders_to_members()
 		
 		"recruit_members":
 			# Find a specific recruitable NPC
 			var target_npc = _get_recruitable_npc()
 			if target_npc:
 				order_manager.create_order(Order.OrderType.RECRUIT_SPECIFIC_NPC, faction_id, {"target_id": target_npc.id})
+				_track_order_for_goal(current_goal)
+				_assign_orders_to_members()
 		
 		"expand_territory":
 			# Find weakest hostile faction
@@ -278,14 +331,20 @@ func _execute_goal(world_state: Dictionary) -> void:
 			
 			if weakest_enemy:
 				order_manager.create_order(Order.OrderType.ATTACK_ENEMY, faction_id, {"target_faction": weakest_enemy.faction_id})
+				_track_order_for_goal(current_goal)
+				_assign_orders_to_members()
 		
 		"improve_relations":
 			if world_state.opportunities.size() > 0:
 				var target = world_state.opportunities[0]
 				order_manager.create_order(Order.OrderType.NEGOTIATE, faction_id, {"target_faction": target.faction_id})
+				_track_order_for_goal(current_goal)
+				_assign_orders_to_members()
 		
 		"patrol_territories":
 			order_manager.create_order(Order.OrderType.PATROL_TERRITORY, faction_id, {})
+			_track_order_for_goal(current_goal)
+			_assign_orders_to_members()
 
 # DEPRECATED: Use OrderManager instead
 func _issue_order_old(order_type: Order.OrderType, target_id: String = "", parameters: Dictionary = {}) -> bool:
@@ -375,8 +434,10 @@ func _assign_orders_to_members() -> void:
 	
 	var faction_id = member_comp.faction_id
 	var available_orders = order_manager.get_available_orders(faction_id)
+	print("COMMANDER: Available orders for faction ", faction_id, " = ", available_orders.size())
 	
 	if available_orders.is_empty():
+		print("COMMANDER: No available orders for faction ", faction_id)
 		return
 	
 	# Get available members
@@ -507,7 +568,7 @@ func _has_available_npcs() -> bool:
 		var entity_manager = Engine.get_singleton("EntityManager")
 		var npcs = entity_manager.get_entities_with_component("NPCComponent")
 		
-		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))  # Correct day calculation
+		var current_day = int(Time.get_ticks_msec() / (24.0 * 60.0 * 60.0 * 1000.0))  # Correct day calculation
 
 		for npc_entity in npcs:
 			var npc_comp = npc_entity.get_component("NPCComponent")
@@ -523,7 +584,7 @@ func _get_recruitable_npc() -> Entity:
 		var npcs = entity_manager.get_entities_with_component("NPCComponent")
 		var recruitable_npcs = []
 		
-		var current_day = int(Time.get_ticks_msec() / (24 * 60 * 60 * 1000))
+		var current_day = int(Time.get_ticks_msec() / (24.0 * 60.0 * 60.0 * 1000.0))
 		
 		for npc_entity in npcs:
 			var npc_comp = npc_entity.get_component("NPCComponent")
@@ -534,3 +595,102 @@ func _get_recruitable_npc() -> Entity:
 			return recruitable_npcs[randi() % recruitable_npcs.size()]
 	
 	return null
+
+# Goal management methods
+func _can_execute_goal(goal_name: String) -> bool:
+	var current_time = Time.get_ticks_msec() / 1000.0
+	var last_completed = completed_goals.get(goal_name, 0.0)
+	var cooldown = goal_cooldowns.get(goal_name, 60.0)
+	
+	# Check if enough time has passed since last completion
+	if current_time - last_completed < cooldown:
+		print("COMMANDER: Goal ", goal_name, " is on cooldown for ", cooldown - (current_time - last_completed), " more seconds")
+		return false
+	
+	# Check if we already have pending orders for this goal
+	var pending_count = pending_orders_by_goal.get(goal_name, 0)
+	if pending_count > 0:
+		print("COMMANDER: Goal ", goal_name, " already has ", pending_count, " pending orders")
+		return false
+	
+	return true
+
+func _track_order_for_goal(goal_name: String) -> void:
+	var current_count = pending_orders_by_goal.get(goal_name, 0)
+	pending_orders_by_goal[goal_name] = current_count + 1
+	print("COMMANDER: Tracking order for goal ", goal_name, ". Pending count: ", pending_orders_by_goal[goal_name])
+
+func _complete_goal(goal_name: String) -> void:
+	completed_goals[goal_name] = Time.get_ticks_msec() / 1000.0
+	pending_orders_by_goal[goal_name] = 0
+	print("COMMANDER: Goal ", goal_name, " completed and marked with cooldown")
+	
+	# Clear current goal if it matches the completed one
+	if current_goal == goal_name:
+		current_goal = ""
+		print("COMMANDER: Cleared current goal after completion")
+
+func _on_order_completed_for_goal(goal_name: String) -> void:
+	var current_count = pending_orders_by_goal.get(goal_name, 0)
+	if current_count > 0:
+		pending_orders_by_goal[goal_name] = current_count - 1
+		print("COMMANDER: Order completed for goal ", goal_name, ". Remaining pending: ", pending_orders_by_goal[goal_name])
+		
+		# If no more pending orders, mark goal as complete
+		if pending_orders_by_goal[goal_name] == 0:
+			_complete_goal(goal_name)
+
+func _on_order_completed_event(event: EventBus.Event) -> void:
+	# Check if this order completion affects our faction
+	var member_comp = entity.get_component("GangMemberComponent")
+	if not member_comp:
+		return
+	
+	var faction_id = event.data.get("faction_id", "")
+	if faction_id != member_comp.faction_id:
+		return
+	
+	# Map order types to goal names for tracking
+	var order_id = event.data.get("order_id", "")
+	if order_id.is_empty():
+		return
+	
+	# Get the order entity to determine its type
+	var entity_manager = Engine.get_singleton("EntityManager")
+	if not entity_manager:
+		return
+	
+	var order_entity = entity_manager.get_entity(order_id)
+	if not order_entity:
+		return
+	
+	var order_comp = order_entity.get_component("OrderComponent")
+	if not order_comp:
+		return
+	
+	# Map order type to goal name
+	var goal_name = _map_order_type_to_goal(order_comp.get_order_type())
+	if not goal_name.is_empty():
+		_on_order_completed_for_goal(goal_name)
+
+func _map_order_type_to_goal(order_type: int) -> String:
+	match order_type:
+		Order.OrderType.BUY_SUPPLIES:
+			# Return the current goal if it's a supply-related goal
+			if current_goal in ["emergency_supplies", "maintain_supplies"]:
+				return current_goal
+			return "emergency_supplies"  # Default fallback
+		Order.OrderType.RECRUIT_SPECIFIC_NPC:
+			return "recruit_members"
+		Order.OrderType.DEFEND_TERRITORY:
+			return "defend_territory"
+		Order.OrderType.SPY:
+			return "gather_intel"
+		Order.OrderType.ATTACK_ENEMY:
+			return "expand_territory"
+		Order.OrderType.NEGOTIATE:
+			return "improve_relations"
+		Order.OrderType.PATROL_TERRITORY:
+			return "patrol_territories"
+		_:
+			return ""

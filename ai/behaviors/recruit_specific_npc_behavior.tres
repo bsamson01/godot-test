@@ -1,0 +1,19 @@
+[gd_resource type="BehaviorTree" load_steps=7 format=3 uid="uid://gy663m34s1c2"]
+
+[ext_resource type="Script" uid="uid://bfacxt83qr8gj" path="res://ai/tasks/get_target_npc_location.gd" id="1_1xhvy"]
+[ext_resource type="Script" uid="uid://tqgvs08qu6sg" path="res://ai/tasks/move.gd" id="2_v7tft"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_f3xuc"]
+
+[sub_resource type="BTAction" id="BTAction_2655d"]
+script = ExtResource("1_1xhvy")
+
+[sub_resource type="BTAction" id="BTAction_7nkyw"]
+script = ExtResource("2_v7tft")
+
+[sub_resource type="BTSequence" id="BTSequence_s85wp"]
+children = [SubResource("BTAction_2655d"), SubResource("BTAction_7nkyw")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_f3xuc")
+root_task = SubResource("BTSequence_s85wp")

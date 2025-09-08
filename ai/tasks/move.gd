@@ -10,4 +10,5 @@ func _tick(_delta: float) -> Status:
 	if agent.nav_agent.is_navigation_finished():
 		return SUCCESS
 	
+	print('running ', _delta)
 	return RUNNING

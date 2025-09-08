@@ -32,4 +32,5 @@ func _tick(_delta: float) -> Status:
 	
 	blackboard.set_var("pos", pos)
 	agent.updateLabel('Going to business')
+	print('Going  to business')
 	return SUCCESS

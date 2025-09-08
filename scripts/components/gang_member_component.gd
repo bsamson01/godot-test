@@ -134,11 +134,10 @@ func is_available() -> bool:
 	return current_state == MemberState.IDLE and current_order == null
 
 func assign_order(order_entity: Entity) -> bool:
+	print("GANGMEMBER: ", member_name, " - assign_order called")
+	
 	if not is_available():
-		Logger.warning("Cannot assign order to busy member", "GangMember", {
-			"member": member_name,
-			"state": MemberState.keys()[current_state]
-		})
+		print("GANGMEMBER: ", member_name, " - not available, state=", MemberState.keys()[current_state])
 		return false
 	
 	var order_comp = order_entity.get_component("OrderComponent")
@@ -149,6 +148,8 @@ func assign_order(order_entity: Entity) -> bool:
 	current_order = order_entity
 	order_progress = 0.0
 	order_start_time = Time.get_ticks_msec() / 1000.0
+	
+	print("GANGMEMBER: ", member_name, " - order assigned successfully! Order type=", order_comp.get_order_type())
 	
 	# Calculate distances for travel timing
 	_calculate_order_distances()

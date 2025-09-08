@@ -1,0 +1,44 @@
+[gd_resource type="BehaviorTree" load_steps=16 format=3 uid="uid://bismlpwlc6ed8"]
+
+[ext_resource type="Script" uid="uid://r3cltsfl1t55" path="res://ai/tasks/get_business_location.gd" id="1_usde6"]
+[ext_resource type="Script" uid="uid://ft2annmdi4ja" path="res://ai/tasks/patrol/pick_patrol_point.gd" id="2_6cmmy"]
+[ext_resource type="Script" uid="uid://tqgvs08qu6sg" path="res://ai/tasks/move.gd" id="2_ecwhu"]
+[ext_resource type="Script" uid="uid://b4i7c75v0nftt" path="res://ai/tasks/get_base_location.gd" id="4_6cmmy"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_s3mhm"]
+
+[sub_resource type="BTAction" id="BTAction_7q2ns"]
+script = ExtResource("1_usde6")
+
+[sub_resource type="BTAction" id="BTAction_167i1"]
+script = ExtResource("2_ecwhu")
+
+[sub_resource type="BTAction" id="BTAction_ued8d"]
+script = ExtResource("2_6cmmy")
+
+[sub_resource type="BTAction" id="BTAction_oa6e6"]
+script = ExtResource("2_ecwhu")
+
+[sub_resource type="BTSequence" id="BTSequence_8xpph"]
+children = [SubResource("BTAction_ued8d"), SubResource("BTAction_oa6e6")]
+
+[sub_resource type="BTDelay" id="BTDelay_ao3nl"]
+seconds = 2.0
+children = [SubResource("BTSequence_8xpph")]
+
+[sub_resource type="BTRepeat" id="BTRepeat_tt67y"]
+times = 4
+children = [SubResource("BTDelay_ao3nl")]
+
+[sub_resource type="BTAction" id="BTAction_5f4pr"]
+script = ExtResource("4_6cmmy")
+
+[sub_resource type="BTAction" id="BTAction_tjko4"]
+script = ExtResource("2_ecwhu")
+
+[sub_resource type="BTSequence" id="BTSequence_usde6"]
+children = [SubResource("BTAction_7q2ns"), SubResource("BTAction_167i1"), SubResource("BTRepeat_tt67y"), SubResource("BTAction_5f4pr"), SubResource("BTAction_tjko4")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_s3mhm")
+root_task = SubResource("BTSequence_usde6")

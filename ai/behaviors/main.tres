@@ -1,0 +1,19 @@
+[gd_resource type="BehaviorTree" load_steps=7 format=3 uid="uid://bekiwejxvktsp"]
+
+[ext_resource type="Script" uid="uid://b3y648oie2xia" path="res://ai/tasks/shared/check_for_order.gd" id="1_aswm0"]
+[ext_resource type="Script" uid="uid://cbm2flcf713su" path="res://ai/tasks/shared/select_order_behavior.gd" id="2_rlknm"]
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_iklw3"]
+
+[sub_resource type="BTCondition" id="BTCondition_ajbrc"]
+script = ExtResource("1_aswm0")
+
+[sub_resource type="BTAction" id="BTAction_my7xp"]
+script = ExtResource("2_rlknm")
+
+[sub_resource type="BTSequence" id="BTSequence_puje8"]
+children = [SubResource("BTCondition_ajbrc"), SubResource("BTAction_my7xp")]
+
+[resource]
+blackboard_plan = SubResource("BlackboardPlan_iklw3")
+root_task = SubResource("BTSequence_puje8")

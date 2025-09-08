@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://luo0noo431eu"]
 
 [ext_resource type="Script" uid="uid://beh6ecw0rtpty" path="res://test/player_new.gd" id="1_qqgw4"]
-[ext_resource type="BehaviorTree" uid="uid://bwgfsexd4af4o" path="res://ai/tres/test.tres" id="2_wvbbu"]
+[ext_resource type="BehaviorTree" uid="uid://bekiwejxvktsp" path="res://ai/behaviors/main.tres" id="2_qqgw4"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_qqgw4"]
 
@@ -26,7 +26,7 @@ transform = Transform3D(1, 0, 0, 0, 1.8, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("BoxShape3D_wvbbu")
 
 [node name="BTPlayer" type="BTPlayer" parent="."]
-behavior_tree = ExtResource("2_wvbbu")
+behavior_tree = ExtResource("2_qqgw4")
 blackboard_plan = SubResource("BlackboardPlan_wvbbu")
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]

@@ -83,6 +83,9 @@ func get_success_chance() -> float:
 func get_failure_reason() -> String:
 	return order.failure_reason
 
+func calculate_travel_time(distance: float, speed: float) -> float:
+	return order.calculate_travel_time(distance, speed)
+
 func validate() -> Validatable.ValidationResult:
 	var result = Validatable.ValidationResult.new()
 	

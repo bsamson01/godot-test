@@ -21,8 +21,11 @@ func _ready():
 		event_bus.subscribe(EventBus.EventType.ORDER_FAILED, _on_order_failed)
 
 func create_order(order_type: Order.OrderType, faction_id: String, data: Dictionary = {}) -> Entity:
+	print("ORDERMANAGER: Creating order - type=", Order.OrderType.keys()[order_type], " faction=", faction_id)
+	
 	# Create order entity
 	var order_entity = Engine.get_singleton("EntityManager").create_entity("order")
+	print("ORDERMANAGER: Created order entity with ID=", order_entity.id)
 	
 	# Add OrderComponent
 	var order_comp = OrderComponent.new()
@@ -40,8 +43,9 @@ func create_order(order_type: Order.OrderType, faction_id: String, data: Diction
 	
 	# Add to faction queue
 	if not faction_orders.has(faction_id):
-		faction_orders[faction_id] = []
+		faction_orders[faction_id] = [] as Array[Entity]
 	faction_orders[faction_id].append(order_entity)
+	print("ORDERMANAGER: Added order to faction queue. Queue size for ", faction_id, " = ", faction_orders[faction_id].size())
 	
 	# Emit event
 	if Engine.has_singleton("EventBus"):
@@ -118,7 +122,10 @@ func assign_order_to_member(order_entity: Entity, member_entity: Entity) -> bool
 	return false
 
 func get_available_orders(faction_id: String) -> Array[Entity]:
-	return faction_orders.get(faction_id, [])
+	if faction_orders.has(faction_id):
+		return faction_orders[faction_id] as Array[Entity]
+	else:
+		return []
 
 func get_member_order(member_id: String) -> Entity:
 	return assigned_orders.get(member_id, null)
