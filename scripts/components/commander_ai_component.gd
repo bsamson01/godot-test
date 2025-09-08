@@ -39,7 +39,7 @@ var goal_weights: Dictionary = {
 func get_component_name() -> String:
 	return "CommanderAIComponent"
 
-func _ready():
+func _on_attached(_entity: Entity) -> void:
 	ai_type = "commander"
 	decision_interval = 5.0  # Commanders think less frequently but more deeply
 	
@@ -52,6 +52,13 @@ func _ready():
 		print("COMMANDER: Subscribed to ORDER_COMPLETED events")
 	else:
 		print("COMMANDER: ERROR - EventBus not available!")
+
+func _on_detached(_entity: Entity) -> void:
+	# Unsubscribe from events
+	if Engine.has_singleton("EventBus"):
+		var event_bus = Engine.get_singleton("EventBus")
+		event_bus.unsubscribe(EventBus.EventType.ORDER_COMPLETED, _on_order_completed_event)
+		print("COMMANDER: Unsubscribed from ORDER_COMPLETED events")
 
 func _update_cached_state() -> void:
 	# Get the gang member component to access faction_id
@@ -646,13 +653,19 @@ func _on_order_completed_for_goal(goal_name: String) -> void:
 			_complete_goal(goal_name)
 
 func _on_order_completed_event(event: EventBus.Event) -> void:
+	print("COMMANDER: Order completed event received! Event data: ", event.data)
+	
 	# Check if this order completion affects our faction
 	var member_comp = entity.get_component("GangMemberComponent")
 	if not member_comp:
+		print("COMMANDER: No GangMemberComponent found on commander entity")
 		return
 	
 	var faction_id = event.data.get("faction_id", "")
+	print("COMMANDER: Event faction_id: ", faction_id, " Our faction_id: ", member_comp.faction_id)
+	
 	if faction_id != member_comp.faction_id:
+		print("COMMANDER: Event faction_id doesn't match our faction_id, ignoring")
 		return
 	
 	print("COMMANDER: Order completed event received for our faction")
