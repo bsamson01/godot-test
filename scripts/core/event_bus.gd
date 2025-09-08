@@ -155,6 +155,11 @@ func _dispatch_event(event: Event) -> void:
 	if event_history.size() > event_history_size:
 		event_history.pop_front()
 	
+	# Debug ORDER_COMPLETED events
+	if event.type == EventType.ORDER_COMPLETED:
+		print("EVENTBUS: Dispatching ORDER_COMPLETED event with data: ", event.data)
+		print("EVENTBUS: Subscribers for ORDER_COMPLETED: ", subscribers.get(event.type, []).size())
+	
 	# Dispatch to subscribers
 	if subscribers.has(event.type):
 		for callback in subscribers[event.type]:

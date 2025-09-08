@@ -172,6 +172,10 @@ func set_entity_thinking(entity_id: String, thinking: bool) -> void:
 # Event handlers
 func _on_entity_created(event: EventBus.Event) -> void:
 	var entity_id = event.data.get("entity_id")
+	if not entity_id:
+		Logger.warning("Entity created event missing entity_id", "AIBehaviorManager")
+		return
+	
 	var entity = Engine.get_singleton("EntityManager").get_entity(entity_id)
 	if not entity:
 		return
@@ -188,6 +192,10 @@ func _on_entity_created(event: EventBus.Event) -> void:
 
 func _on_entity_destroyed(event: EventBus.Event) -> void:
 	var entity_id = event.data.get("entity_id")
+	if not entity_id:
+		Logger.warning("Entity destroyed event missing entity_id", "AIBehaviorManager")
+		return
+	
 	remove_behavior_tree_for_entity(entity_id)
 
 func get_stats() -> Dictionary:

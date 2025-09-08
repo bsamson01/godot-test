@@ -367,20 +367,26 @@ func _complete_order() -> void:
 	# Complete the order and get results
 	var result = order_comp.complete(entity)
 	
+	# Generate completion message
+	var completion_message = ""
 	if result.get("success", false):
 		missions_completed += 1
+		completion_message = "%s: Order completed successfully!" % member_name
 		Logger.info("Order completed successfully by gang member", "GangMember", {
 			"member": member_name,
 			"order_id": current_order.id,
 			"effects": result
 		})
+		print("MEMBER COMPLETED ORDER: %s finished their mission" % member_name)
 	else:
 		missions_failed += 1
+		completion_message = "%s: Order failed - %s" % [member_name, result.get("reason", "Unknown")]
 		Logger.info("Order failed", "GangMember", {
 			"member": member_name,
 			"order_id": current_order.id,
 			"reason": result.get("reason", "Unknown")
 		})
+		print("MEMBER FAILED ORDER: %s - %s" % [member_name, result.get("reason", "Unknown")])
 	
 	# Emit completion event
 	if Engine.has_singleton("EventBus"):
@@ -389,8 +395,11 @@ func _complete_order() -> void:
 			{
 				"order_id": current_order.id,
 				"member_id": entity.id,
+				"member_name": member_name,
 				"faction_id": faction_id,
-				"success": result.get("success", false)
+				"success": result.get("success", false),
+				"message": completion_message,
+				"reason": result.get("reason", "") if not result.get("success", false) else ""
 			},
 			10  # Higher priority
 		)

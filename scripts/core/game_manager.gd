@@ -392,6 +392,10 @@ func _on_entity_killed(event: EventBus.Event) -> void:
 
 func _on_order_completed(event: EventBus.Event) -> void:
 	var order_id = event.data.get("order_id")
+	if not order_id:
+		Logger.warning("Order completed event missing order_id", "GameManager")
+		return
+	
 	var order_entity = entity_manager.get_entity(order_id)
 	
 	if order_entity:

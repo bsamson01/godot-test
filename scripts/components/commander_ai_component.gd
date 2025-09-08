@@ -43,10 +43,15 @@ func _ready():
 	ai_type = "commander"
 	decision_interval = 5.0  # Commanders think less frequently but more deeply
 	
+	print("COMMANDER: Commander AI component ready for entity: ", entity.id)
+	
 	# Subscribe to order completion events to track goal progress
 	if Engine.has_singleton("EventBus"):
 		var event_bus = Engine.get_singleton("EventBus")
 		event_bus.subscribe(EventBus.EventType.ORDER_COMPLETED, _on_order_completed_event)
+		print("COMMANDER: Subscribed to ORDER_COMPLETED events")
+	else:
+		print("COMMANDER: ERROR - EventBus not available!")
 
 func _update_cached_state() -> void:
 	# Get the gang member component to access faction_id
@@ -650,28 +655,39 @@ func _on_order_completed_event(event: EventBus.Event) -> void:
 	if faction_id != member_comp.faction_id:
 		return
 	
+	print("COMMANDER: Order completed event received for our faction")
+	
 	# Map order types to goal names for tracking
-	var order_id = event.data.get("order_id", "")
-	if order_id.is_empty():
+	var order_id = event.data.get("order_id")
+	if not order_id or (order_id is String and order_id.is_empty()):
+		print("COMMANDER: No order_id in completion event")
 		return
 	
 	# Get the order entity to determine its type
 	var entity_manager = Engine.get_singleton("EntityManager")
 	if not entity_manager:
+		print("COMMANDER: EntityManager not available")
 		return
 	
 	var order_entity = entity_manager.get_entity(order_id)
 	if not order_entity:
+		print("COMMANDER: Order entity not found: ", order_id)
 		return
 	
 	var order_comp = order_entity.get_component("OrderComponent")
 	if not order_comp:
+		print("COMMANDER: Order component not found for order: ", order_id)
 		return
+	
+	print("COMMANDER: Processing order completion for order type: ", order_comp.get_order_type())
 	
 	# Map order type to goal name
 	var goal_name = _map_order_type_to_goal(order_comp.get_order_type())
 	if not goal_name.is_empty():
+		print("COMMANDER: Mapped order to goal: ", goal_name)
 		_on_order_completed_for_goal(goal_name)
+	else:
+		print("COMMANDER: Could not map order type to goal: ", order_comp.get_order_type())
 
 func _map_order_type_to_goal(order_type: int) -> String:
 	match order_type:

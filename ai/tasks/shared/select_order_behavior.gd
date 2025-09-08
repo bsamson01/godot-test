@@ -24,7 +24,16 @@ func _enter():
 	# Reset the failure flag
 	_instantiation_failed = false
 	
-	var order_type = blackboard.get_var("order_type")
+	# Safe get with fallback
+	var order_type
+	if blackboard.has_var("order_type"):
+		order_type = blackboard.get_var("order_type")
+	else:
+		# Set default and log warning
+		order_type = -1
+		blackboard.set_var("order_type", order_type)
+		push_warning("SELECT_ORDER_BEHAVIOR: order_type not set, using default")
+	
 	if not order_type in BehaviorTrees:
 		push_error("SELECT_ORDER_BEHAVIOR: Unknown order type: " + str(order_type))
 		_instantiation_failed = true
